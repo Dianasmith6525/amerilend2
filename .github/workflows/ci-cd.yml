@@ -1,0 +1,126 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # Lint and Type Check
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run TypeScript check
+        run: pnpm run check
+        
+      - name: Run Prettier
+        run: pnpm run format -- --check
+
+  # Run Tests
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run tests
+        run: pnpm test
+        env:
+          DATABASE_URL: mysql://test:test@localhost:3306/test_db
+          JWT_SECRET: test-secret-for-ci
+          OAUTH_SERVER_URL: http://localhost:3000
+          VITE_APP_ID: test-app-id
+
+  # Build Application
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Build client
+        run: pnpm run build
+        env:
+          VITE_APP_ID: ${{ secrets.VITE_APP_ID || 'placeholder' }}
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            client/dist/
+          retention-days: 7
+
+  # Deploy to Production (only on main branch)
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://your-app-url.com
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          
+      - name: Deploy to production
+        run: |
+          echo "Deploy step - configure based on your hosting provider"
+          # Example for a generic deployment:
+          # - SSH into server
+          # - Copy files to deployment directory
+          # - Restart application server
+          # 
+          # For specific platforms:
+          # - Vercel: vercel --prod
+          # - Railway: railway up
+          # - AWS: use AWS CLI or CDK
+          # - Docker: build and push to registry
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}

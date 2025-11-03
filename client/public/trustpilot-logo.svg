@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <!-- Trustpilot Background -->
+  <rect width="200" height="60" fill="#00B4A6" rx="4"/>
+  
+  <!-- Stars -->
+  <g fill="white">
+    <!-- Star 1 -->
+    <polygon points="25,15 28,22 35,22 29,27 31,34 25,29 19,34 21,27 15,22 22,22"/>
+    <!-- Star 2 -->
+    <polygon points="40,15 43,22 50,22 44,27 46,34 40,29 34,34 36,27 30,22 37,22"/>
+    <!-- Star 3 -->
+    <polygon points="55,15 58,22 65,22 59,27 61,34 55,29 49,34 51,27 45,22 52,22"/>
+    <!-- Star 4 -->
+    <polygon points="70,15 73,22 80,22 74,27 76,34 70,29 64,34 66,27 60,22 67,22"/>
+    <!-- Star 5 -->
+    <polygon points="85,15 88,22 95,22 89,27 91,34 85,29 79,34 81,27 75,22 82,22"/>
+  </g>
+  
+  <!-- Trustpilot Text -->
+  <text x="110" y="28" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white">
+    Trustpilot
+  </text>
+  <text x="110" y="45" font-family="Arial, sans-serif" font-size="10" fill="white" opacity="0.9">
+    Excellent Rating
+  </text>
+</svg>

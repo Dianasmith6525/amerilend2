@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 220" width="200" height="220">
+  <!-- BBB Shield Background -->
+  <defs>
+    <linearGradient id="bbbGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F5F5F5;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Shield -->
+  <path d="M 100 10 L 160 40 L 160 110 C 160 160 100 200 100 200 C 100 200 40 160 40 110 L 40 40 Z" 
+        fill="url(#bbbGradient)" stroke="#1F4788" stroke-width="2"/>
+  
+  <!-- Blue background in shield -->
+  <path d="M 100 20 L 150 45 L 150 110 C 150 155 100 190 100 190 C 100 190 50 155 50 110 L 50 45 Z" 
+        fill="#1F4788" opacity="0.1"/>
+  
+  <!-- BBB text -->
+  <text x="100" y="100" font-family="Arial, sans-serif" font-size="48" font-weight="bold" 
+        text-anchor="middle" fill="#1F4788">BBB</text>
+  
+  <!-- A+ grade -->
+  <text x="100" y="140" font-family="Arial, sans-serif" font-size="36" font-weight="bold" 
+        text-anchor="middle" fill="#1F4788">A+</text>
+  
+  <!-- Accredited Business text -->
+  <text x="100" y="165" font-family="Arial, sans-serif" font-size="10" font-weight="bold" 
+        text-anchor="middle" fill="#1F4788">ACCREDITED</text>
+  <text x="100" y="178" font-family="Arial, sans-serif" font-size="10" font-weight="bold" 
+        text-anchor="middle" fill="#1F4788">BUSINESS</text>
+</svg>

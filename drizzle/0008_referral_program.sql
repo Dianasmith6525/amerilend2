@@ -1,0 +1,40 @@
+CREATE TABLE `referralCodes` (
+  `id` int AUTO_INCREMENT NOT NULL,
+  `userId` int NOT NULL,
+  `code` varchar(16) NOT NULL UNIQUE,
+  `referrerRewardType` ENUM('discount', 'bonus_credit', 'cash_bonus') NOT NULL DEFAULT 'cash_bonus',
+  `referrerRewardAmount` int NOT NULL,
+  `refereeRewardType` ENUM('discount', 'bonus_credit', 'cash_bonus') NOT NULL DEFAULT 'discount',
+  `refereeRewardAmount` int NOT NULL,
+  `status` ENUM('active', 'inactive', 'suspended') NOT NULL DEFAULT 'active',
+  `totalReferrals` int NOT NULL DEFAULT 0,
+  `totalRewardsEarned` int NOT NULL DEFAULT 0,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deactivatedAt` timestamp,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code_unique` (`code`),
+  KEY `userId_idx` (`userId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `referrals` (
+  `id` int AUTO_INCREMENT NOT NULL,
+  `referralCodeId` int NOT NULL,
+  `referrerId` int NOT NULL,
+  `refereeId` int NOT NULL,
+  `referralSource` varchar(100),
+  `ipAddress` varchar(45),
+  `status` ENUM('pending', 'signed_up', 'loan_applied', 'loan_approved', 'completed') NOT NULL DEFAULT 'signed_up',
+  `referrerRewardStatus` ENUM('pending', 'earned', 'paid', 'cancelled') NOT NULL DEFAULT 'pending',
+  `referrerRewardAmount` int NOT NULL,
+  `referrerRewardPaidAt` timestamp,
+  `refereeRewardStatus` ENUM('pending', 'earned', 'applied', 'cancelled') NOT NULL DEFAULT 'pending',
+  `refereeRewardAmount` int NOT NULL,
+  `refereeRewardAppliedAt` timestamp,
+  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `referralCodeId_idx` (`referralCodeId`),
+  KEY `referrerId_idx` (`referrerId`),
+  KEY `refereeId_idx` (`refereeId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
