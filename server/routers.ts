@@ -13,6 +13,7 @@ import { eq, and } from "drizzle-orm";
 import { getDb } from "./db";
 import { generateSupportResponse, getSuggestedQuestions, trackSupportConversation } from "./_core/aiSupport";
 import { getGoogleAuthUrl, getGoogleUserInfo } from "./_core/google-oauth";
+import { sdk } from "./_core/sdk";
 
 export const appRouter = router({
   system: systemRouter,
@@ -120,7 +121,6 @@ export const appRouter = router({
           
           // Create session
           console.log('[Google OAuth] Creating session token');
-          const { sdk } = await import("./_core/sdk");
           const sessionToken = await sdk.createSessionToken(user.openId, {
             name: googleUser.name,
           });

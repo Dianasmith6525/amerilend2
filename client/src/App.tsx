@@ -21,6 +21,7 @@ import CaliforniaPrivacy from "./pages/CaliforniaPrivacy";
 import AboutUs from "./pages/AboutUs";
 import FAQ from "./pages/FAQ";
 import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
 import LoanGuides from "./pages/LoanGuides";
 import UserProfile from "./pages/UserProfile";
 import PreQualification from "./pages/PreQualification";
@@ -47,6 +48,7 @@ function Router() {
       <Route path={"/about-us"} component={AboutUs} />
       <Route path={"/faq"} component={FAQ} />
       <Route path={"/blog"} component={Blog} />
+      <Route path={"/blog/:slug"} component={BlogPost} />
       <Route path={"/loan-guides"} component={LoanGuides} />
       <Route path={"/profile"} component={UserProfile} />
       <Route path={"/404"} component={NotFound} />

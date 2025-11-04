@@ -6,51 +6,61 @@ export default function Blog() {
   const articles = [
     {
       title: "Complete Guide to USA Loan Types",
+      slug: "complete-guide-usa-loan-types",
       excerpt: "Explore all 15 types of loans available in the USA, their requirements, and which one is right for you.",
       date: "November 3, 2025"
     },
     {
       title: "Personal vs Installment Loans: Which Is Better?",
+      slug: "personal-vs-installment-loans",
       excerpt: "Compare personal and installment loans to find the right financing option for your needs.",
       date: "November 2, 2025"
     },
     {
       title: "How to Improve Your Credit Score",
+      slug: "improve-credit-score",
       excerpt: "Learn practical tips to boost your credit score and qualify for better loan rates.",
       date: "November 1, 2025"
     },
     {
       title: "Personal Loan vs. Credit Card: Which is Right for You?",
+      slug: "personal-loan-vs-credit-card",
       excerpt: "Understand the differences and discover which option works best for your financial needs.",
       date: "October 28, 2025"
     },
     {
       title: "5 Common Financial Mistakes to Avoid",
+      slug: "5-common-financial-mistakes",
       excerpt: "Avoid these costly mistakes that could impact your financial health and credit score.",
       date: "October 25, 2025"
     },
     {
       title: "The Complete Guide to Personal Loans",
+      slug: "complete-guide-personal-loans",
       excerpt: "Everything you need to know about personal loans, including types, benefits, and how to apply.",
       date: "October 20, 2025"
     },
     {
       title: "Emergency Fund: Why You Need One and How to Build It",
+      slug: "emergency-fund-guide",
       excerpt: "Discover why an emergency fund is crucial and strategies to build yours.",
       date: "October 15, 2025"
     },
     {
       title: "Managing Debt: Strategies for Success",
+      slug: "managing-debt-strategies",
       excerpt: "Learn proven strategies to manage and eliminate debt faster.",
       date: "October 10, 2025"
     },
     {
       title: "Auto Loans Explained: What You Need to Know",
+      slug: "auto-loans-explained",
       excerpt: "Get the facts about auto loans, including rates, terms, and how to qualify.",
       date: "October 5, 2025"
     },
     {
       title: "Home Equity Loans vs HELOC: Making the Right Choice",
+      slug: "home-equity-vs-heloc",
       excerpt: "Understand the differences between home equity loans and HELOCs for your financial goals.",
       date: "September 30, 2025"
     }
@@ -93,9 +103,11 @@ export default function Blog() {
                 <p className="text-sm text-gray-500 mb-2">{article.date}</p>
                 <h3 className="text-2xl font-bold text-[#0033A0] mb-3">{article.title}</h3>
                 <p className="text-gray-700 mb-4">{article.excerpt}</p>
-                <a href="#read-more" className="text-[#0033A0] hover:text-[#FF8C00] font-semibold">
-                  Read More →
-                </a>
+                <Link href={`/blog/${article.slug}`}>
+                  <a className="text-[#0033A0] hover:text-[#FF8C00] font-semibold cursor-pointer">
+                    Read More →
+                  </a>
+                </Link>
               </div>
             ))}
           </div>
