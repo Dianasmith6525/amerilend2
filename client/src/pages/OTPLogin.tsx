@@ -82,13 +82,12 @@ export default function OTPLogin() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password");
 
-  // Query to get Google Auth URL
-  const { data: googleAuthData } = trpc.googleAuth.getAuthUrl.useQuery(undefined, {
-    enabled: false, // Only fetch when needed
-  });
+  // State for Google OAuth
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const handleSocialLogin = async (provider: string) => {
     if (provider === "Google") {
+      setIsGoogleLoading(true);
       try {
         // Get Google OAuth URL from backend
         const result = await trpc.googleAuth.getAuthUrl.query();
@@ -101,6 +100,8 @@ export default function OTPLogin() {
       } catch (error) {
         console.error("Google login error:", error);
         toast.error("Failed to initialize Google login");
+      } finally {
+        setIsGoogleLoading(false);
       }
     } else {
       toast.info(`${provider} login coming soon!`);
@@ -379,9 +380,19 @@ export default function OTPLogin() {
                     variant="outline"
                     className={`w-full ${provider.color}`}
                     onClick={() => handleSocialLogin(provider.name)}
+                    disabled={provider.name === "Google" && isGoogleLoading}
                   >
-                    <span className="mr-2">{provider.icon}</span>
-                    Continue with {provider.name}
+                    {provider.name === "Google" && isGoogleLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Connecting to Google...
+                      </>
+                    ) : (
+                      <>
+                        <span className="mr-2">{provider.icon}</span>
+                        Continue with {provider.name}
+                      </>
+                    )}
                   </Button>
                 ))}
               </div>
