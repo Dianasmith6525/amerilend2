@@ -14,6 +14,7 @@ import { getDb } from "./db";
 import { generateSupportResponse, getSuggestedQuestions, trackSupportConversation } from "./_core/aiSupport";
 import { getGoogleAuthUrl, getGoogleUserInfo } from "./_core/google-oauth";
 import { sdk } from "./_core/sdk";
+import { sendEmail } from "./_core/notification";
 
 export const appRouter = router({
   system: systemRouter,
@@ -208,7 +209,6 @@ export const appRouter = router({
         }
 
         // Create session
-        const { sdk } = await import("./_core/sdk");
         const sessionToken = await sdk.createSessionToken(user.openId, {
           name: user.email,
         });
@@ -264,7 +264,6 @@ export const appRouter = router({
         }
 
         // Create session
-        const { sdk } = await import("./_core/sdk");
         const sessionToken = await sdk.createSessionToken(user.openId, {
           name: user.email,
         });
@@ -306,7 +305,6 @@ export const appRouter = router({
         }
 
         // Create session
-        const { sdk } = await import("./_core/sdk");
         const sessionToken = await sdk.createSessionToken(user.openId, {
           name: user.email,
         });
@@ -344,7 +342,6 @@ export const appRouter = router({
         await db.createOTP(email, code, "password_reset", expiresAt);
 
         // Send email with reset code
-        const { sendEmail } = await import("./_core/notification");
         await sendEmail({
           to: email,
           subject: "Password Reset Code - AmeriLend",
