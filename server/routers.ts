@@ -12,6 +12,7 @@ import { legalAcceptances } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "./db";
 import { generateSupportResponse, getSuggestedQuestions, trackSupportConversation } from "./_core/aiSupport";
+import { getGoogleAuthUrl, getGoogleUserInfo } from "./_core/google-oauth";
 
 export const appRouter = router({
   system: systemRouter,
@@ -26,6 +27,72 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+  }),
+  
+  // Google OAuth router
+  googleAuth: router({
+    // Get Google OAuth URL
+    getAuthUrl: publicProcedure.query(() => {
+      return { url: getGoogleAuthUrl() };
+    }),
+    
+    // Handle Google OAuth callback
+    callback: publicProcedure
+      .input(z.object({
+        code: z.string(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        try {
+          // Get user info from Google
+          const googleUser = await getGoogleUserInfo(input.code);
+          
+          if (!googleUser.email_verified) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Email not verified with Google",
+            });
+          }
+          
+          // Create or get user
+          let user = await db.getUserByEmail(googleUser.email);
+          
+          if (!user) {
+            // Create new user
+            await db.upsertUser({
+              email: googleUser.email,
+              openId: `google_${googleUser.sub}`,
+              role: "user",
+            });
+            user = await db.getUserByEmail(googleUser.email);
+          }
+          
+          if (!user) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create user",
+            });
+          }
+          
+          // Create session
+          const { sdk } = await import("./_core/sdk");
+          const sessionToken = await sdk.createSessionToken(user.openId, {
+            name: googleUser.name,
+          });
+          
+          // Set cookie
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
+          
+          console.log(`[Google OAuth] Session created for ${user.email}`);
+          return { success: true, user };
+        } catch (error) {
+          console.error('[Google OAuth] Error:', error);
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error instanceof Error ? error.message : "Google authentication failed",
+          });
+        }
+      }),
   }),
 
   // OTP Authentication router

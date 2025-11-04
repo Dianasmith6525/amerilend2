@@ -24,6 +24,7 @@ import Blog from "./pages/Blog";
 import LoanGuides from "./pages/LoanGuides";
 import UserProfile from "./pages/UserProfile";
 import PreQualification from "./pages/PreQualification";
+import GoogleCallback from "./pages/GoogleCallback";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <Route path={"/payment/:id"} component={AuthorizeNetPayment} />
       <Route path={"/login"} component={OTPLogin} />
       <Route path={"/signup"} component={OTPSignup} />
+      <Route path={"/auth/google/callback"} component={GoogleCallback} />
       <Route path={"/legal/:type"} component={LegalDocument} />
       <Route path={"/otp-login"} component={OTPLogin} />
       <Route path={"/payment-enhanced/:id"} component={EnhancedPaymentPage} />

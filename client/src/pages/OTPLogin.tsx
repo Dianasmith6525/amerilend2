@@ -82,10 +82,29 @@ export default function OTPLogin() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password");
 
-  const handleSocialLogin = (provider: string) => {
-    toast.info(`${provider} login coming soon!`);
-    // TODO: Implement OAuth flow for each provider
-    // window.location.href = `/api/auth/${provider.toLowerCase()}`;
+  // Query to get Google Auth URL
+  const { data: googleAuthData } = trpc.googleAuth.getAuthUrl.useQuery(undefined, {
+    enabled: false, // Only fetch when needed
+  });
+
+  const handleSocialLogin = async (provider: string) => {
+    if (provider === "Google") {
+      try {
+        // Get Google OAuth URL from backend
+        const result = await trpc.googleAuth.getAuthUrl.query();
+        if (result?.url) {
+          // Redirect to Google OAuth page
+          window.location.href = result.url;
+        } else {
+          toast.error("Failed to initialize Google login");
+        }
+      } catch (error) {
+        console.error("Google login error:", error);
+        toast.error("Failed to initialize Google login");
+      }
+    } else {
+      toast.info(`${provider} login coming soon!`);
+    }
   };
 
   const passwordLoginMutation = trpc.password.login.useMutation({
