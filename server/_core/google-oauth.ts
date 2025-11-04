@@ -1,12 +1,22 @@
 import { OAuth2Client } from 'google-auth-library';
 import { ENV } from './env';
 
-// Initialize Google OAuth client
-const googleClient = new OAuth2Client(
-  ENV.GOOGLE_CLIENT_ID,
-  ENV.GOOGLE_CLIENT_SECRET,
-  ENV.GOOGLE_CALLBACK_URL
-);
+// Initialize Google OAuth client lazily
+let googleClient: OAuth2Client | null = null;
+
+function getGoogleClient(): OAuth2Client {
+  if (!googleClient) {
+    if (!ENV.GOOGLE_CLIENT_ID || !ENV.GOOGLE_CLIENT_SECRET || !ENV.GOOGLE_CALLBACK_URL) {
+      throw new Error('Google OAuth environment variables not configured');
+    }
+    googleClient = new OAuth2Client(
+      ENV.GOOGLE_CLIENT_ID,
+      ENV.GOOGLE_CLIENT_SECRET,
+      ENV.GOOGLE_CALLBACK_URL
+    );
+  }
+  return googleClient;
+}
 
 export interface GoogleUserInfo {
   email: string;
@@ -20,12 +30,13 @@ export interface GoogleUserInfo {
  * Generate Google OAuth URL for user to authenticate
  */
 export function getGoogleAuthUrl(): string {
+  const client = getGoogleClient();
   const scopes = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
   ];
 
-  return googleClient.generateAuthUrl({
+  return client.generateAuthUrl({
     access_type: 'offline',
     scope: scopes,
     prompt: 'consent',
@@ -36,13 +47,14 @@ export function getGoogleAuthUrl(): string {
  * Exchange authorization code for user information
  */
 export async function getGoogleUserInfo(code: string): Promise<GoogleUserInfo> {
+  const client = getGoogleClient();
   try {
     // Exchange code for tokens
-    const { tokens } = await googleClient.getToken(code);
-    googleClient.setCredentials(tokens);
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
 
     // Get user info
-    const ticket = await googleClient.verifyIdToken({
+    const ticket = await client.verifyIdToken({
       idToken: tokens.id_token!,
       audience: ENV.GOOGLE_CLIENT_ID,
     });
@@ -69,8 +81,9 @@ export async function getGoogleUserInfo(code: string): Promise<GoogleUserInfo> {
  * Verify a Google ID token (for client-side authentication)
  */
 export async function verifyGoogleToken(token: string): Promise<GoogleUserInfo> {
+  const client = getGoogleClient();
   try {
-    const ticket = await googleClient.verifyIdToken({
+    const ticket = await client.verifyIdToken({
       idToken: token,
       audience: ENV.GOOGLE_CLIENT_ID,
     });
