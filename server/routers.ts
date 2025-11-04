@@ -33,7 +33,32 @@ export const appRouter = router({
   googleAuth: router({
     // Get Google OAuth URL
     getAuthUrl: publicProcedure.query(() => {
-      return { url: getGoogleAuthUrl() };
+      try {
+        console.log('[Google OAuth] Generating auth URL');
+        
+        // Check if Google OAuth is configured
+        if (!ENV.GOOGLE_CLIENT_ID || !ENV.GOOGLE_CLIENT_SECRET || !ENV.GOOGLE_CALLBACK_URL) {
+          console.error('[Google OAuth] Missing environment variables:', {
+            hasClientId: !!ENV.GOOGLE_CLIENT_ID,
+            hasClientSecret: !!ENV.GOOGLE_CLIENT_SECRET,
+            hasCallbackUrl: !!ENV.GOOGLE_CALLBACK_URL,
+          });
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Google OAuth not configured",
+          });
+        }
+        
+        const url = getGoogleAuthUrl();
+        console.log('[Google OAuth] Auth URL generated successfully');
+        return { url };
+      } catch (error) {
+        console.error('[Google OAuth] Error generating auth URL:', error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to generate Google auth URL",
+        });
+      }
     }),
     
     // Handle Google OAuth callback
@@ -42,11 +67,25 @@ export const appRouter = router({
         code: z.string(),
       }))
       .mutation(async ({ input, ctx }) => {
+        console.log('[Google OAuth] Starting callback with code:', input.code.substring(0, 10) + '...');
+        
         try {
+          // Validate environment variables first
+          if (!ENV.GOOGLE_CLIENT_ID || !ENV.GOOGLE_CLIENT_SECRET || !ENV.GOOGLE_CALLBACK_URL) {
+            console.error('[Google OAuth] Missing environment variables in callback');
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Google OAuth not configured",
+            });
+          }
+          
           // Get user info from Google
+          console.log('[Google OAuth] Exchanging code for user info');
           const googleUser = await getGoogleUserInfo(input.code);
+          console.log('[Google OAuth] User info retrieved:', { email: googleUser.email, verified: googleUser.email_verified });
           
           if (!googleUser.email_verified) {
+            console.log('[Google OAuth] Email not verified');
             throw new TRPCError({
               code: "BAD_REQUEST",
               message: "Email not verified with Google",
@@ -54,9 +93,11 @@ export const appRouter = router({
           }
           
           // Create or get user
+          console.log('[Google OAuth] Checking if user exists:', googleUser.email);
           let user = await db.getUserByEmail(googleUser.email);
           
           if (!user) {
+            console.log('[Google OAuth] Creating new user');
             // Create new user
             await db.upsertUser({
               email: googleUser.email,
@@ -64,9 +105,13 @@ export const appRouter = router({
               role: "user",
             });
             user = await db.getUserByEmail(googleUser.email);
+            console.log('[Google OAuth] User created:', user?.email);
+          } else {
+            console.log('[Google OAuth] User already exists:', user.email);
           }
           
           if (!user) {
+            console.log('[Google OAuth] Failed to create/get user');
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: "Failed to create user",
@@ -74,19 +119,28 @@ export const appRouter = router({
           }
           
           // Create session
+          console.log('[Google OAuth] Creating session token');
           const { sdk } = await import("./_core/sdk");
           const sessionToken = await sdk.createSessionToken(user.openId, {
             name: googleUser.name,
           });
+          console.log('[Google OAuth] Session token created');
           
           // Set cookie
           const cookieOptions = getSessionCookieOptions(ctx.req);
           ctx.res.cookie(COOKIE_NAME, sessionToken, cookieOptions);
+          console.log('[Google OAuth] Cookie set');
           
           console.log(`[Google OAuth] Session created for ${user.email}`);
-          return { success: true, user };
+          return { success: true, user: { email: user.email, name: googleUser.name } };
         } catch (error) {
-          console.error('[Google OAuth] Error:', error);
+          console.error('[Google OAuth] Error in callback:', error);
+          
+          // Ensure we always return a proper error response
+          if (error instanceof TRPCError) {
+            throw error;
+          }
+          
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: error instanceof Error ? error.message : "Google authentication failed",
