@@ -7,7 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { APP_LOGO, APP_TITLE } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { httpBatchLink, createTRPCProxyClient } from "@trpc/client";
 import { Loader2, Mail, KeyRound, Lock, ArrowLeft } from "lucide-react";
+import superjson from "superjson";
+import { toast } from "sonner";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -89,12 +92,33 @@ export default function OTPLogin() {
     if (provider === "Google") {
       setIsGoogleLoading(true);
       try {
-        // Get Google OAuth URL from backend
-        const result = await trpc.googleAuth.getAuthUrl.query();
+        console.log("Starting Google OAuth flow...");
+        // Create tRPC client directly using createTRPCProxyClient
+        const trpcClient = createTRPCProxyClient({
+          links: [
+            httpBatchLink({
+              url: "/api/trpc",
+              transformer: superjson,
+              fetch(input, init) {
+                return globalThis.fetch(input, {
+                  ...(init ?? {}),
+                  credentials: "include",
+                });
+              },
+            }),
+          ],
+        });
+
+        console.log("Fetching Google auth URL...");
+        const result = await trpcClient.googleAuth.getAuthUrl.query();
+        console.log("Google auth URL result:", result);
+
         if (result?.url) {
+          console.log("Redirecting to Google OAuth:", result.url);
           // Redirect to Google OAuth page
           window.location.href = result.url;
         } else {
+          console.error("No URL returned from backend");
           toast.error("Failed to initialize Google login");
         }
       } catch (error) {
