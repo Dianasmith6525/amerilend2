@@ -12,7 +12,6 @@ import { Loader2, Mail, KeyRound, Lock, ArrowLeft } from "lucide-react";
 import superjson from "superjson";
 import { toast } from "sonner";
 import { Link, useLocation } from "wouter";
-import { toast } from "sonner";
 
 // Social login providers
 const SOCIAL_PROVIDERS = [
@@ -277,7 +276,7 @@ export default function OTPLogin() {
                 : step === "forgot"
                 ? "Enter your email to receive a password reset code"
                 : step === "reset"
-                ? `Reset code sent to ${email}`
+                ? `Verification code sent to ${email}`
                 : "Choose your preferred login method"}
             </CardDescription>
           </CardHeader>

@@ -3,6 +3,8 @@
  * Supports BTC, ETH, USDT payments via Coinbase Commerce or similar gateway
  */
 
+import { getMyWalletAddress } from "./crypto-config";
+
 /**
  * Supported cryptocurrencies
  */
@@ -102,14 +104,16 @@ export async function createCryptoCharge(
     // Convert USD to crypto
     const cryptoAmount = await convertUSDToCrypto(amount, currency);
 
-    // For demo purposes, generate mock payment data
-    // In production, call Coinbase Commerce API or similar
-    const mockPaymentAddress = generateMockCryptoAddress(currency);
+    // Get YOUR wallet address for this cryptocurrency
+    // This ensures payments go to YOUR wallet, not a random address
+    const paymentAddress = getMyWalletAddress(currency);
+    
     const chargeId = `charge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     /*
     // Production implementation with Coinbase Commerce:
+    // Uncomment this section when you have Coinbase Commerce API credentials
     const response = await fetch("https://api.commerce.coinbase.com/charges", {
       method: "POST",
       headers: {
@@ -146,13 +150,13 @@ export async function createCryptoCharge(
     }
     */
 
-    // Return mock data for demo
+    // Using your personal wallet address
     return {
       success: true,
       chargeId,
       cryptoAmount,
-      paymentAddress: mockPaymentAddress,
-      qrCodeUrl: `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${currency}:${mockPaymentAddress}?amount=${cryptoAmount}`,
+      paymentAddress, // YOUR wallet address from .env configuration
+      qrCodeUrl: `https://chart.googleapis.com/chart?chs=200x200&cht=qr&chl=${currency}:${paymentAddress}?amount=${cryptoAmount}`,
       expiresAt,
     };
   } catch (error) {
@@ -220,25 +224,6 @@ export function validateCryptoWebhook(
   const computedSignature = hmac.digest("hex");
 
   return signature === computedSignature;
-}
-
-/**
- * Generate mock cryptocurrency address for demo
- */
-function generateMockCryptoAddress(currency: CryptoCurrency): string {
-  const prefixes: Record<CryptoCurrency, string> = {
-    BTC: "bc1q",
-    ETH: "0x",
-    USDT: "0x", // ERC-20
-    USDC: "0x", // ERC-20
-  };
-
-  const prefix = prefixes[currency];
-  const randomPart = Array.from({ length: currency === "BTC" ? 38 : 38 }, () =>
-    "0123456789abcdef"[Math.floor(Math.random() * 16)]
-  ).join("");
-
-  return prefix + randomPart;
 }
 
 /**

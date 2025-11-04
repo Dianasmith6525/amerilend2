@@ -25,31 +25,6 @@ export default function Home() {
     setOpenFaq(openFaq === index ? null : index);
   };
 
-  // Load Authorize.Net seal script
-  useEffect(() => {
-    // Wait for component to mount
-    const timer = setTimeout(() => {
-      // Set the customer ID as a global variable
-      (window as any).ANS_customer_id = "2be1fcff-517b-4ceb-aa13-06e36deec1ff";
-      
-      // Create and append the script
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.language = 'javascript';
-      script.src = 'https://verify.authorize.net/anetseal/seal.js';
-      
-      // Append to body for seal to work properly
-      document.body.appendChild(script);
-      
-      // Log for debugging
-      console.log('Authorize.Net seal script loaded');
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
-
   return (
     <div className="min-h-screen bg-white">
       {/* Header/Navigation */}
@@ -997,12 +972,9 @@ export default function Home() {
             </div>
 
             {/* Authorize.Net Seal */}
-            <div className="text-center py-4">
+            <div className="flex justify-center py-6">
               {/* (c) 2005, 2025. Authorize.Net is a registered trademark of CyberSource Corporation */}
-              <div 
-                className="AuthorizeNetSeal inline-block min-h-[100px]" 
-                id="AuthorizeNetSeal"
-              ></div>
+              <div className="AuthorizeNetSeal"></div>
             </div>
 
             {/* California Privacy */}
