@@ -54,16 +54,6 @@ async function startServer() {
     app.post("/api/webhooks/crypto", express.raw({ type: "application/json" }), handleCryptoWebhook);
     console.log("[Server] Payment webhook routes registered");
     
-    // tRPC API
-    app.use(
-      "/api/trpc",
-      createExpressMiddleware({
-        router: appRouter,
-        createContext,
-      })
-    );
-    console.log("[Server] tRPC middleware configured");
-    
     // development mode uses Vite, production mode uses static files
     if (process.env.NODE_ENV === "development") {
       console.log("[Server] Setting up Vite dev server...");
@@ -78,6 +68,38 @@ async function startServer() {
       console.log("[Server] Using static file serving (production mode)");
       serveStatic(app);
     }
+    
+    // tRPC API - MUST be after Vite/static but before catch-all routes
+    app.use(
+      "/api/trpc",
+      createExpressMiddleware({
+        router: appRouter,
+        createContext,
+      })
+    );
+    console.log("[Server] tRPC middleware configured");
+
+    // Global error handler - catches any unhandled errors from middleware
+    app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      console.error("[Server] Global error handler caught:", err);
+      
+      // Don't send error response if headers already sent
+      if (res.headersSent) {
+        return next(err);
+      }
+      
+      // Send JSON error response
+      res.status(500).json({
+        error: "Internal server error",
+        message: process.env.NODE_ENV === "development" ? err.message : "An error occurred",
+      });
+    });
+
+    // 404 handler - catch any undefined routes
+    app.use((req: express.Request, res: express.Response) => {
+      console.warn(`[Server] 404 Not Found: ${req.method} ${req.path}`);
+      res.status(404).json({ error: "Not found" });
+    });
 
     const preferredPort = parseInt(process.env.PORT || "3000");
     console.log("[Server] Finding available port starting from", preferredPort);
