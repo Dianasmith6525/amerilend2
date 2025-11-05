@@ -14,6 +14,7 @@ import OTPLogin from "./pages/OTPLogin";
 import OTPSignup from "./pages/OTPSignup";
 import LegalDocument from "./pages/LegalDocument";
 import AuthorizeNetPayment from "./pages/AuthorizeNetPayment";
+import StripePayment from "./pages/StripePayment";
 import EnhancedPaymentPage from "./pages/EnhancedPaymentPage";
 import TermsOfUse from "./pages/TermsOfUse";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -36,6 +37,7 @@ function Router() {
       <Route path={"/dashboard"} component={Dashboard} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/payment/:id"} component={AuthorizeNetPayment} />
+      <Route path={"/stripe-payment/:id"} component={StripePayment} />
       <Route path={"/login"} component={OTPLogin} />
       <Route path={"/signup"} component={OTPSignup} />
       <Route path={"/auth/google/callback"} component={GoogleCallback} />

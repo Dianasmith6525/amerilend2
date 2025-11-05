@@ -1,0 +1,162 @@
+/* Custom Animated Checkbox Styles - From Uiverse.io by SharpTH */
+
+/* Main checkbox container */
+.cbx {
+  -webkit-perspective: 20;
+  perspective: 20;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: -12px;
+  border: 2px solid #e8e8eb;
+  background: #e8e8eb;
+  border-radius: 4px;
+  transform: translate3d(0, 0, 0);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cbx:hover {
+  border-color: #0b76ef;
+}
+
+/* Flip animation container */
+.flip {
+  display: block;
+  transition: all 0.4s ease;
+  transform-style: preserve-3d;
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+
+/* Handle checked state */
+.flip[data-checked="true"] {
+  transform: rotateY(180deg);
+}
+
+/* Hidden checkbox input */
+#cbx {
+  display: none;
+}
+
+/* Checked state - border color */
+#cbx:checked + .cbx {
+  border-color: #0b76ef;
+}
+
+/* Checked state - flip animation */
+#cbx:checked + .flip {
+  transform: rotateY(180deg);
+}
+
+/* Front and back face styles */
+.front,
+.back {
+  backface-visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+}
+
+/* Front face - white unchecked state */
+.front {
+  background: #fff;
+  z-index: 1;
+}
+
+/* Back face - blue checked state with checkmark */
+.back {
+  transform: rotateY(180deg);
+  background: #0b76ef;
+  text-align: center;
+  color: #fff;
+  line-height: 20px;
+  box-shadow: 0 0 0 1px #0b76ef;
+}
+
+/* SVG checkmark styling */
+.back svg {
+  margin-top: 3px;
+  fill: none;
+}
+
+.back svg path {
+  stroke: #fff;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Inline checkbox styles (for input elements directly styled) */
+.checkbox-animated {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e8e8eb;
+  background: #e8e8eb;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.checkbox-animated:hover {
+  border-color: #0b76ef;
+  transform: scale(1.05);
+}
+
+.checkbox-animated:checked {
+  background: #0b76ef;
+  border-color: #0b76ef;
+  box-shadow: 0 0 0 1px #0b76ef;
+}
+
+.checkbox-animated:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.checkbox-animated:focus-visible {
+  outline: 2px solid #0b76ef;
+  outline-offset: 2px;
+}
+
+.checkbox-animated:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Wrapper for custom checkbox with label */
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.checkbox-wrapper label {
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}

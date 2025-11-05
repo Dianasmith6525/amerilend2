@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { CodeButton } from "@/components/ui/CodeButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getLoginUrl } from "@/const";
@@ -16,6 +17,7 @@ import {
   CreditCard,
   Share2,
   ArrowLeft,
+  ArrowRight,
   Home,
   PartyPopper,
   Sparkles,
@@ -25,137 +27,13 @@ import {
   Download,
   Upload,
   History,
-  Calculator,
 } from "lucide-react";
+import { FullPageLoader } from "@/components/ui/loader";
 import { Link } from "wouter";
 import { AISupportChat } from "@/components/AISupportChat";
 import { ReferralComponent } from "@/components/ReferralComponent";
 import confetti from "canvas-confetti";
 import { useEffect, useState } from "react";
-
-// Loan Calculator Component
-function LoanCalculator() {
-  const [loanAmount, setLoanAmount] = useState(5000);
-  const [loanTerm, setLoanTerm] = useState(12);
-  const [interestRate, setInterestRate] = useState(15);
-
-  const monthlyPayment = (loanAmount * (interestRate / 100 / 12) * Math.pow(1 + interestRate / 100 / 12, loanTerm)) / 
-                        (Math.pow(1 + interestRate / 100 / 12, loanTerm) - 1);
-  const totalPayment = monthlyPayment * loanTerm;
-  const totalInterest = totalPayment - loanAmount;
-
-  return (
-    <div className="space-y-6">
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Input Section */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Loan Amount: ${loanAmount.toLocaleString()}
-            </label>
-            <input
-              type="range"
-              min="500"
-              max="100000"
-              step="500"
-              value={loanAmount}
-              onChange={(e) => setLoanAmount(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0033A0]"
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>$500</span>
-              <span>$100,000</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Loan Term: {loanTerm} months
-            </label>
-            <input
-              type="range"
-              min="3"
-              max="60"
-              step="3"
-              value={loanTerm}
-              onChange={(e) => setLoanTerm(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0033A0]"
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>3 months</span>
-              <span>60 months</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Interest Rate (APR): {interestRate}%
-            </label>
-            <input
-              type="range"
-              min="5"
-              max="195"
-              step="5"
-              value={interestRate}
-              onChange={(e) => setInterestRate(Number(e.target.value))}
-              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0033A0]"
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>5%</span>
-              <span>195%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Results Section */}
-        <div className="space-y-3">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300">
-            <CardContent className="p-4">
-              <p className="text-sm text-gray-600 mb-1">Monthly Payment</p>
-              <p className="text-3xl font-bold text-[#0033A0]">
-                ${isNaN(monthlyPayment) ? '0.00' : monthlyPayment.toFixed(2)}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-gray-200">
-            <CardContent className="p-4">
-              <p className="text-sm text-gray-600 mb-1">Total Payment</p>
-              <p className="text-2xl font-bold text-gray-800">
-                ${isNaN(totalPayment) ? '0.00' : totalPayment.toFixed(2)}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-gray-200">
-            <CardContent className="p-4">
-              <p className="text-sm text-gray-600 mb-1">Total Interest</p>
-              <p className="text-2xl font-bold text-gray-800">
-                ${isNaN(totalInterest) ? '0.00' : totalInterest.toFixed(2)}
-              </p>
-            </CardContent>
-          </Card>
-
-          <div className="pt-2">
-            <Link href="/apply" className="inline-block w-full">
-              <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white w-full">
-                Apply for This Loan
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-        <p className="font-semibold mb-1">💡 Estimate Only</p>
-        <p>
-          This is an estimate. Your actual rate and payment may vary based on your creditworthiness, 
-          income, and other factors. Apply now to get your personalized rate.
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default function Dashboard() {
   const { user, isAuthenticated, logout, loading } = useAuth({
@@ -214,7 +92,7 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return <FullPageLoader text="Loading your dashboard..." />;
   }
 
   if (!isAuthenticated) {
@@ -518,9 +396,9 @@ export default function Dashboard() {
                       Start a new loan application
                     </p>
                     <Link href="/apply" className="inline-block w-full">
-                      <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white w-full">
+                      <CodeButton className="w-full" icon={<ArrowRight />}>
                         Apply Now
-                      </Button>
+                      </CodeButton>
                     </Link>
                   </div>
                 </div>
@@ -582,10 +460,6 @@ export default function Dashboard() {
               <TabsTrigger value="activity" className="data-[state=active]:bg-white">
                 <History className="w-4 h-4 mr-2" />
                 Activity
-              </TabsTrigger>
-              <TabsTrigger value="calculator" className="data-[state=active]:bg-white">
-                <Calculator className="w-4 h-4 mr-2" />
-                Calculator
               </TabsTrigger>
             </TabsList>
 
@@ -785,20 +659,7 @@ export default function Dashboard() {
               </Card>
             </TabsContent>
 
-            {/* Loan Calculator Tab */}
-            <TabsContent value="calculator" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl text-[#0033A0] flex items-center gap-2">
-                    <Calculator className="w-6 h-6" />
-                    Loan Calculator
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <LoanCalculator />
-                </CardContent>
-              </Card>
-            </TabsContent>
+
           </Tabs>
 
           {/* Help Section */}

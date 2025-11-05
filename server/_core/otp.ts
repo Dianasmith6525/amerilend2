@@ -5,7 +5,7 @@
 
 import { getDb } from "../db";
 import { otpCodes } from "../../drizzle/schema";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, desc } from "drizzle-orm";
 import { sendEmailOTP, sendSMSOTP } from "./notification";
 
 /**
@@ -18,14 +18,16 @@ export function generateOTP(): string {
 /**
  * Create and store an OTP code for email verification
  */
-export async function createOTP(email: string, purpose: "signup" | "login"): Promise<string> {
+export async function createOTP(
+  email: string, 
+  code: string,
+  purpose: "signup" | "login" | "password_reset", 
+  expiresAt: Date
+): Promise<string> {
   const db = await getDb();
   if (!db) {
     throw new Error("Database not available");
   }
-
-  const code = generateOTP();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   // Invalidate any existing OTP codes for this email/purpose
   await db
@@ -34,7 +36,7 @@ export async function createOTP(email: string, purpose: "signup" | "login"): Pro
     .where(
       and(
         eq(otpCodes.email, email),
-        eq(otpCodes.purpose, purpose),
+        eq(otpCodes.purpose, purpose as any),
         eq(otpCodes.verified, 0)
       )
     );
@@ -43,7 +45,7 @@ export async function createOTP(email: string, purpose: "signup" | "login"): Pro
   await db.insert(otpCodes).values({
     email,
     code,
-    purpose,
+    purpose: purpose as any,
     expiresAt,
     verified: 0,
     attempts: 0,
@@ -58,8 +60,8 @@ export async function createOTP(email: string, purpose: "signup" | "login"): Pro
 export async function verifyOTP(
   email: string,
   code: string,
-  purpose: "signup" | "login"
-): Promise<{ valid: boolean; error?: string }> {
+  purpose: "signup" | "login" | "password_reset"
+): Promise<{ valid: boolean; error?: string } | boolean> {
   const db = await getDb();
   if (!db) {
     return { valid: false, error: "Database not available" };
@@ -72,23 +74,23 @@ export async function verifyOTP(
     .where(
       and(
         eq(otpCodes.email, email),
-        eq(otpCodes.purpose, purpose),
+        eq(otpCodes.purpose, purpose as any),
         eq(otpCodes.verified, 0),
         gt(otpCodes.expiresAt, new Date())
       )
     )
-    .orderBy(otpCodes.createdAt)
+    .orderBy(desc(otpCodes.createdAt))
     .limit(1);
 
   if (results.length === 0) {
-    return { valid: false, error: "No valid OTP found or OTP expired" };
+    return purpose === "password_reset" ? false : { valid: false, error: "No valid OTP found or OTP expired" };
   }
 
   const otpRecord = results[0];
 
   // Check if too many attempts
   if (otpRecord.attempts >= 5) {
-    return { valid: false, error: "Too many failed attempts. Please request a new code." };
+    return purpose === "password_reset" ? false : { valid: false, error: "Too many failed attempts. Please request a new code." };
   }
 
   // Increment attempts
@@ -97,9 +99,10 @@ export async function verifyOTP(
     .set({ attempts: otpRecord.attempts + 1 })
     .where(eq(otpCodes.id, otpRecord.id));
 
-  // Verify code
-  if (otpRecord.code !== code) {
-    return { valid: false, error: "Invalid code" };
+  // Verify code (trim whitespace to handle any formatting issues)
+  const trimmedCode = code.trim();
+  if (otpRecord.code !== trimmedCode) {
+    return purpose === "password_reset" ? false : { valid: false, error: "Invalid code" };
   }
 
   // Mark as verified
@@ -108,7 +111,7 @@ export async function verifyOTP(
     .set({ verified: 1 })
     .where(eq(otpCodes.id, otpRecord.id));
 
-  return { valid: true };
+  return purpose === "password_reset" ? true : { valid: true };
 }
 
 /**

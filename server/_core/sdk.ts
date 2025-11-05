@@ -201,7 +201,8 @@ class SDKServer {
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
+      // Session cookie is missing - this is normal for unauthenticated requests
+      // Only log at debug level to reduce noise in console
       return null;
     }
 

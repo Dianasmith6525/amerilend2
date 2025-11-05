@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { Loader } from "@/components/ui/loader";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -44,7 +45,7 @@ export default function GoogleCallback() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4">
       <div className="text-center">
-        <Loader2 className="w-12 h-12 animate-spin text-[#0033A0] mx-auto mb-4" />
+        <Loader size={150} className="mb-6" />
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">
           Completing Google Sign-In
         </h2>

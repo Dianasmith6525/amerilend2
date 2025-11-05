@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import {
@@ -24,6 +25,7 @@ import {
   Shield,
 } from "lucide-react";
 import { useState } from "react";
+import { FullPageLoader } from "@/components/ui/loader";
 import { Link } from "wouter";
 import { toast } from "sonner";
 
@@ -113,11 +115,7 @@ export default function UserProfile() {
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Loading profile...</div>
-      </div>
-    );
+    return <FullPageLoader text="Loading your profile..." />;
   }
 
   if (!user) {
@@ -327,16 +325,24 @@ export default function UserProfile() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="street">Street Address</Label>
-                    <Input
-                      id="street"
-                      value={formData.street}
-                      onChange={(e) => setFormData({ ...formData, street: e.target.value })}
-                      placeholder="123 Main Street"
-                      className="border-gray-300 focus:border-[#0033A0]"
-                    />
-                  </div>
+                  <AddressAutocomplete
+                    id="street"
+                    value={formData.street}
+                    onInputChange={(value) => setFormData({ ...formData, street: value })}
+                    onAddressSelect={(address) => {
+                      setFormData({
+                        ...formData,
+                        street: address.street,
+                        city: address.city,
+                        state: address.state,
+                        zipCode: address.zipCode,
+                      });
+                    }}
+                    label="Street Address"
+                    placeholder="Start typing your address..."
+                    apiKey={import.meta.env.VITE_GOOGLE_PLACES_API_KEY || ""}
+                    className="border-gray-300 focus:border-[#0033A0]"
+                  />
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="space-y-2">

@@ -19,11 +19,8 @@
   <body>
     <div id="root"></div>
     
-    <!-- Authorize.Net Seal Script -->
-    <script type="text/javascript" language="javascript">
-      var ANS_customer_id="2be1fcff-517b-4ceb-aa13-06e36deec1ff";
-    </script>
-    <script type="text/javascript" language="javascript" src="https://verify.authorize.net/anetseal/seal.js"></script>
+    <!-- Authorize.Net Seal Script - Only loads on home page -->
+    <!-- Moved to Home.tsx component to load conditionally -->
     
     <script type="module" src="/src/main.tsx"></script>
     <script

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { CodeButton } from "@/components/ui/CodeButton";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   CheckCircle2,
@@ -10,8 +11,11 @@ import {
   ChevronDown,
   Menu,
   Phone,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { AISupportChat } from "@/components/AISupportChat";
@@ -20,11 +24,61 @@ export default function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isAuthenticated } = useAuth();
+  const authorizeNetSealRef = useRef<HTMLDivElement>(null);
+  const [currentPage, setCurrentPage] = useState(0);
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
   };
 
+  useEffect(() => {
+    if (authorizeNetSealRef.current) {
+      const script = document.createElement("script");
+      script.type = "text/javascript";
+      script.src = "//verify.authorize.net:443/anetseal/seal.js";
+      
+      // Define the customer ID on the window object
+      (window as any).ANS_customer_id = "2be1fcff-517b-4ceb-aa13-06e36deec1ff";
+
+      authorizeNetSealRef.current.appendChild(script);
+
+      return () => {
+        // Cleanup: remove the script when the component unmounts
+        if (authorizeNetSealRef.current) {
+          authorizeNetSealRef.current.innerHTML = "";
+        }
+      };
+    }
+  }, []);
+
+  const states = [
+    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
+    'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia',
+    'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
+    'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland',
+    'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri',
+    'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey',
+    'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
+    'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina',
+    'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+    'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+  ];
+  const statesPerPage = 10;
+  const totalPages = Math.ceil(states.length / statesPerPage);
+
+  const handlePrevPage = () => {
+    setCurrentPage((prev) => (prev > 0 ? prev - 1 : prev));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => (prev < totalPages - 1 ? prev + 1 : prev));
+  };
+
+  const visibleStates = states.slice(
+    currentPage * statesPerPage,
+    (currentPage + 1) * statesPerPage
+  );
+  
   return (
     <div className="min-h-screen bg-white">
       {/* Header/Navigation */}
@@ -68,9 +122,9 @@ export default function Home() {
                 <>
                   <Link href="/apply">
                     <a className="inline-block">
-                      <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white font-semibold px-6">
+                      <CodeButton icon={<ArrowRight />}>
                         Apply Now
-                      </Button>
+                      </CodeButton>
                     </a>
                   </Link>
                   <Link href="/dashboard">
@@ -85,9 +139,9 @@ export default function Home() {
                 <>
                   <Link href="/apply">
                     <a className="inline-block">
-                      <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white font-semibold px-6">
+                      <CodeButton icon={<ArrowRight />}>
                         Apply Now
-                      </Button>
+                      </CodeButton>
                     </a>
                   </Link>
                   <Link href="/login">
@@ -129,9 +183,9 @@ export default function Home() {
                 </a>
                 <Link href="/apply">
                   <a className="inline-block w-full">
-                    <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white w-full">
+                    <CodeButton className="w-full" icon={<ArrowRight />}>
                       Apply Now
-                    </Button>
+                    </CodeButton>
                   </a>
                 </Link>
                 {isAuthenticated ? (
@@ -200,9 +254,9 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/apply">
                   <a className="inline-block">
-                    <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white font-semibold px-8 py-6 text-lg w-full sm:w-auto">
+                    <CodeButton className="btn-lg w-full sm:w-auto" icon={<ArrowRight />}>
                       Apply Now
-                    </Button>
+                    </CodeButton>
                   </a>
                 </Link>
                 <Link href="/pre-qualify">
@@ -278,9 +332,9 @@ export default function Home() {
 
               <Link href="/apply">
                 <a className="inline-block">
-                  <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white font-semibold px-8 py-6 text-lg mt-8">
+                  <CodeButton className="btn-lg" icon={<ArrowRight />}>
                     Apply Now
-                  </Button>
+                  </CodeButton>
                 </a>
               </Link>
 
@@ -774,13 +828,38 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Security Notice */}
-            <div className="text-center mt-4">
+            {/* Security Notice and Trust Seals */}
+            <div className="text-center mt-6 space-y-4">
               <div className="flex items-center justify-center gap-2 text-gray-600">
                 <Shield className="w-4 h-4 text-green-600" />
-                <span className="text-xs md:text-sm">
-                  All transactions are encrypted and secured with industry-leading security protocols
+                <span className="text-xs md:text-sm font-semibold">
+                  Secure Payment Processing Protected by Industry Leaders
                 </span>
+              </div>
+              
+              <div className="flex flex-wrap justify-center items-center gap-8 pt-6 pb-4">
+                {/* Authorize.Net Seal */}
+                <div ref={authorizeNetSealRef} className="min-w-[100px] min-h-[50px] pointer-events-none select-none [&_*]:pointer-events-none [&_a]:!cursor-default" />
+                
+                {/* DigiCert Trust Seal */}
+                <div className="text-center">
+                  <div>
+                    <a href="https://sslinsights.com/ssl-checker-tool/">
+                      <img src="https://sslinsights.com/wp-content/uploads/2024/03/digicert-basic-site-seal.svg" alt="DigiCert Site Seal" />
+                    </a>
+                  </div>
+                  <a href="https://sslinsights.com/ssl-checker-tool/" className="text-xs text-gray-500 hover:underline">Free SSL Checker</a>
+                </div>
+
+                {/* Entrust Trust Seal */}
+                <div className="text-center">
+                    <div>
+                        <a href="https://sslinsights.com/ssl-checker-tool/">
+                            <img src="https://sslinsights.com/wp-content/uploads/2024/04/entrust-site-seal.png" alt="entrust-trust-seal" />
+                        </a>
+                    </div>
+                    <a href="https://sslinsights.com/ssl-checker-tool/" className="text-xs text-gray-500 hover:underline">Free SSL Checker</a>
+                </div>
               </div>
             </div>
           </div>
@@ -800,29 +879,44 @@ export default function Home() {
             </p>
           </div>
 
-          {/* States Grid */}
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {[
-                'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
-                'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia',
-                'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
-                'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland',
-                'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri',
-                'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey',
-                'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
-                'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina',
-                'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
-                'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
-              ].map((state) => (
+          {/* Paginated States Grid */}
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {visibleStates.map((state) => (
                 <div
                   key={state}
-                  className="bg-white rounded-lg p-3 text-center shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200 border border-gray-100"
+                  className="bg-white rounded-lg p-3 text-center shadow-sm border border-gray-100"
                 >
-                  <span className="text-gray-700 font-medium text-sm">{state}</span>
+                  <span className="text-gray-700 font-medium text-sm whitespace-nowrap">{state}</span>
                 </div>
               ))}
             </div>
+
+            {/* Pagination Controls */}
+            <div className="flex justify-center items-center mt-8 gap-4">
+              <Button
+                onClick={handlePrevPage}
+                disabled={currentPage === 0}
+                variant="outline"
+                className="border-[#0033A0] text-[#0033A0] hover:bg-[#0033A0] hover:text-white"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+              <span className="text-gray-600 font-medium">
+                Page {currentPage + 1} of {totalPages}
+              </span>
+              <Button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages - 1}
+                variant="outline"
+                className="border-[#0033A0] text-[#0033A0] hover:bg-[#0033A0] hover:text-white"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
 
             {/* Additional Info */}
             <div className="mt-12 bg-white rounded-xl p-8 shadow-lg">
@@ -846,14 +940,15 @@ export default function Home() {
                   Ready to get started? Apply now and get an instant decision!
                 </p>
                 <Link href="/apply">
-                  <Button className="bg-[#0033A0] hover:bg-[#002080] text-white px-8 py-3">
-                    Apply Now - All States Welcome
-                  </Button>
+                  <a className="inline-block">
+                    <CodeButton className="btn-lg" icon={<ArrowRight />}>
+                      Apply Now - All States Welcome
+                    </CodeButton>
+                  </a>
                 </Link>
               </div>
             </div>
           </div>
-        </div>
       </section>
 
       {/* Footer */}
@@ -969,12 +1064,6 @@ export default function Home() {
                   </a>
                 </Link>
               </p>
-            </div>
-
-            {/* Authorize.Net Seal */}
-            <div className="flex justify-center py-6">
-              {/* (c) 2005, 2025. Authorize.Net is a registered trademark of CyberSource Corporation */}
-              <div className="AuthorizeNetSeal"></div>
             </div>
 
             {/* California Privacy */}

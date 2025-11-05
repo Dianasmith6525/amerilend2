@@ -30,43 +30,89 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  const app = express();
-  const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // Apply general API rate limiting
-  app.use("/api", apiRateLimiter);
-  // OAuth callback under /api/oauth/callback
-  registerOAuthRoutes(app);
-  // Payment webhooks (use raw body for signature validation)
-  app.post("/api/webhooks/authorizenet", express.raw({ type: "application/json" }), handleAuthorizeNetWebhook);
-  app.post("/api/webhooks/crypto", express.raw({ type: "application/json" }), handleCryptoWebhook);
-  // tRPC API
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    })
-  );
-  // development mode uses Vite, production mode uses static files
-  if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+  try {
+    console.log("[Server] Starting...");
+    const app = express();
+    const server = createServer(app);
+    console.log("[Server] Express app and HTTP server created");
+    
+    // Configure body parser with larger size limit for file uploads
+    app.use(express.json({ limit: "50mb" }));
+    app.use(express.urlencoded({ limit: "50mb", extended: true }));
+    console.log("[Server] Body parser middleware configured");
+    
+    // Apply general API rate limiting
+    app.use("/api", apiRateLimiter);
+    console.log("[Server] Rate limiter configured");
+    
+    // OAuth callback under /api/oauth/callback
+    registerOAuthRoutes(app);
+    console.log("[Server] OAuth routes registered");
+    
+    // Payment webhooks (use raw body for signature validation)
+    app.post("/api/webhooks/authorizenet", express.raw({ type: "application/json" }), handleAuthorizeNetWebhook);
+    app.post("/api/webhooks/crypto", express.raw({ type: "application/json" }), handleCryptoWebhook);
+    console.log("[Server] Payment webhook routes registered");
+    
+    // tRPC API
+    app.use(
+      "/api/trpc",
+      createExpressMiddleware({
+        router: appRouter,
+        createContext,
+      })
+    );
+    console.log("[Server] tRPC middleware configured");
+    
+    // development mode uses Vite, production mode uses static files
+    if (process.env.NODE_ENV === "development") {
+      console.log("[Server] Setting up Vite dev server...");
+      try {
+        await setupVite(app, server);
+        console.log("[Server] Vite dev server configured successfully");
+      } catch (viteError) {
+        console.error("[Server] Vite setup error:", viteError);
+        throw viteError;
+      }
+    } else {
+      console.log("[Server] Using static file serving (production mode)");
+      serveStatic(app);
+    }
+
+    const preferredPort = parseInt(process.env.PORT || "3000");
+    console.log("[Server] Finding available port starting from", preferredPort);
+    const port = await findAvailablePort(preferredPort);
+
+    if (port !== preferredPort) {
+      console.log(`[Server] Port ${preferredPort} is busy, using port ${port} instead`);
+    }
+
+    server.listen(port, () => {
+      console.log(`[Server] Listening on http://localhost:${port}/`);
+    });
+
+    // Handle server errors
+    server.on("error", (err) => {
+      console.error("[Server] HTTP server error:", err);
+      process.exit(1);
+    });
+
+    process.on("unhandledRejection", (reason) => {
+      console.error("[Server] Unhandled rejection:", reason);
+      process.exit(1);
+    });
+
+    process.on("uncaughtException", (err) => {
+      console.error("[Server] Uncaught exception:", err);
+      process.exit(1);
+    });
+  } catch (err) {
+    console.error("[Server] Startup error:", err);
+    if (err instanceof Error) {
+      console.error("[Server] Error stack:", err.stack);
+    }
+    process.exit(1);
   }
-
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
-  }
-
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-  });
 }
 
 startServer().catch(console.error);

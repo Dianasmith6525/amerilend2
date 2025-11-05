@@ -81,15 +81,19 @@ export default function OTPSignup() {
   const [otp, setOtp] = useState('');
   const [authMethod, setAuthMethod] = useState('password');
 
-  const handleSocialSignup = (provider) => {
+  const handleSocialSignup = (provider: string) => {
     toast.info(`${provider} signup coming soon!`);
     // TODO: Implement OAuth flow for each provider
     // window.location.href = `/api/auth/${provider.toLowerCase()}`;
   };
 
   const passwordRegisterMutation = trpc.password.register.useMutation({
-    onSuccess: () => {
-      toast.success('Account created successfully!');
+    onSuccess: (data) => {
+      const userEmail = data.user?.email?.split('@')[0] || 'User';
+      toast.success(`✅ Welcome to AmeriLend, ${userEmail}!`, {
+        description: 'Your account has been created successfully. Let\'s get you a loan!',
+        duration: 3000,
+      });
       
       // Trigger welcome confetti
       const duration = 2000;
@@ -124,23 +128,36 @@ export default function OTPSignup() {
       }, 1500);
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to create account');
+      toast.error("❌ Account Creation Failed", {
+        description: error.message || 'Failed to create account',
+        duration: 4000,
+      });
     },
   });
 
   const requestCodeMutation = trpc.otp.requestCode.useMutation({
     onSuccess: () => {
-      toast.success('Verification code sent to your email');
+      toast.success("✅ Code Sent!", {
+        description: "Check your email for the verification code",
+        duration: 3000,
+      });
       setStep('verify');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to send verification code');
+      toast.error("❌ Failed to Send Code", {
+        description: error.message || 'Failed to send verification code',
+        duration: 4000,
+      });
     },
   });
 
   const verifyCodeMutation = trpc.otp.verifyCode.useMutation({
-    onSuccess: () => {
-      toast.success('Account created successfully!');
+    onSuccess: (data) => {
+      const userEmail = data.user?.email?.split('@')[0] || 'User';
+      toast.success(`✅ Email Verified, ${userEmail}!`, {
+        description: 'Your account is all set. Redirecting to loan application...',
+        duration: 3000,
+      });
       
       // Trigger welcome confetti
       const duration = 2000;
@@ -175,11 +192,14 @@ export default function OTPSignup() {
       }, 1500);
     },
     onError: (error) => {
-      toast.error(error.message || 'Invalid verification code');
+      toast.error("❌ Verification Failed", {
+        description: error.message || 'Invalid verification code',
+        duration: 4000,
+      });
     },
   });
 
-  const handlePasswordSignup = (e) => {
+  const handlePasswordSignup = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password || !confirmPassword) {
@@ -200,7 +220,7 @@ export default function OTPSignup() {
     passwordRegisterMutation.mutate({ email, password });
   };
 
-  const handleSendCode = (e) => {
+  const handleSendCode = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email) {
@@ -214,7 +234,7 @@ export default function OTPSignup() {
     });
   };
 
-  const handleVerify = (e) => {
+  const handleVerify = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (otp.length !== 6) {

@@ -5,14 +5,159 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { CheckCircle2, Loader2, Phone, ArrowLeft, Save, PartyPopper } from "lucide-react";
+import { FullPageLoader } from "@/components/ui/loader";
+import { CheckCircle2, Loader2, Phone, ArrowLeft, ArrowRight, Save, PartyPopper } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import { ProgressTracker, type ProgressStep } from "@/components/ProgressTracker";
 import confetti from "canvas-confetti";
+
+type ValidationIssue = {
+  path?: (string | number)[];
+  code?: string;
+  message?: string;
+  expected?: string;
+  received?: string;
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  dependents: "Number of Dependents",
+  priorBankruptcy: "Bankruptcy History",
+  monthlyIncome: "Monthly Income",
+  requestedAmount: "Requested Loan Amount",
+  fullName: "Full Name",
+  middleInitial: "Middle Initial",
+  email: "Email Address",
+  phone: "Phone Number",
+  dateOfBirth: "Date of Birth",
+  ssn: "Social Security Number",
+  idType: "ID Type",
+  idNumber: "ID Number",
+  maritalStatus: "Marital Status",
+  citizenshipStatus: "Citizenship Status",
+  bankruptcyDate: "Bankruptcy Date",
+  street: "Street Address",
+  city: "City",
+  state: "State",
+  zipCode: "ZIP Code",
+  employmentStatus: "Employment Status",
+  employer: "Employer",
+  loanType: "Loan Type",
+  loanPurpose: "Loan Purpose",
+};
+
+// Helper function to translate technical errors into clear, user-friendly messages
+const translateErrorMessage = (error: any): string => {
+  console.log("Full error object:", error);
+  console.log("Error data:", error?.data);
+  console.log("Error message:", error?.message);
+
+  // Handle Zod validation errors from structured format
+  const zodIssues: ValidationIssue[] | undefined = error?.data?.zodIssues;
+
+  if (zodIssues && zodIssues.length > 0) {
+    // If multiple validation errors, show the first one with a count
+    const zodIssue = zodIssues[0];
+    const fieldPath = Array.isArray(zodIssue.path) ? zodIssue.path.join(".") : "";
+    const primarySegment = Array.isArray(zodIssue.path) && typeof zodIssue.path[0] === "string" ? zodIssue.path[0] : undefined;
+    const fieldLabel = FIELD_LABELS[fieldPath] ?? (primarySegment ? FIELD_LABELS[primarySegment] : undefined) ?? (fieldPath || "This field");
+
+    if (zodIssue.code === "invalid_type") {
+      const expected = zodIssue.expected ? zodIssue.expected.replace(/_/g, " ") : "valid";
+      const received = zodIssue.received ? zodIssue.received.replace(/_/g, " ") : "invalid";
+      
+      // Special handling for common validation issues
+      if (expected === "string" && received === "number") {
+        return `❌ ${fieldLabel} should be entered as text, not as a number. Please check your input.`;
+      }
+      if (expected === "number" && received === "string") {
+        return `❌ ${fieldLabel} should be a number. Please enter only numeric values.`;
+      }
+      if (expected === "boolean" && received === "number") {
+        return `❌ ${fieldLabel} should be Yes/No, but we received a number. Please select from the available options.`;
+      }
+      
+      return `❌ ${fieldLabel} has an incorrect format. Expected ${expected}, but received ${received}.`;
+    }
+
+    if (zodIssue.code === "too_small") {
+      return `❌ ${fieldLabel} is too short or has too few items.`;
+    }
+
+    if (zodIssue.code === "too_big") {
+      return `❌ ${fieldLabel} is too long or has too many items.`;
+    }
+
+    if (zodIssue.message) {
+      return `❌ ${fieldLabel}: ${zodIssue.message}`;
+    }
+
+    // If we have multiple errors, mention it
+    if (zodIssues.length > 1) {
+      return `Validation failed for ${fieldLabel} and ${zodIssues.length - 1} other field(s).`;
+    }
+  }
+
+  // FALLBACK: Handle raw JSON error format if structured format isn't available
+  const errorMessage = typeof error?.message === "string" ? error.message : "Something went wrong while submitting your application.";
+  
+  try {
+    // Try to parse if the message looks like JSON
+    if (errorMessage.startsWith("[{")) {
+      const parsedErrors = JSON.parse(errorMessage);
+      if (Array.isArray(parsedErrors) && parsedErrors.length > 0) {
+        const firstError = parsedErrors[0];
+        const fieldName = Array.isArray(firstError.path) ? firstError.path[0] : "unknown field";
+        const fieldLabel = FIELD_LABELS[fieldName] ?? fieldName;
+        const expected = firstError.expected?.replace(/_/g, " ") || "valid";
+        const received = firstError.received?.replace(/_/g, " ") || "invalid";
+        
+        if (firstError.code === "invalid_type") {
+          if (expected === "string" && received === "number") {
+            return `❌ ${fieldLabel} should be entered as text, not as a number. Please check your input.`;
+          }
+          if (expected === "number" && received === "string") {
+            return `❌ ${fieldLabel} should be a number. Please enter only numeric values.`;
+          }
+          if (expected === "boolean" && received === "number") {
+            return `❌ ${fieldLabel} should be Yes/No, but we received a number. Please select from the available options.`;
+          }
+          return `❌ ${fieldLabel} has an incorrect format. Expected ${expected}, but received ${received}.`;
+        }
+        return `❌ ${fieldLabel}: ${firstError.message || "Validation failed"}`;
+      }
+    }
+  } catch (parseError) {
+    console.log("Could not parse error as JSON:", parseError);
+  }
+
+  const errorMap: Record<string, string> = {
+    "too_small": "Please provide more details for this field",
+    "All agreements must be accepted": "📋 You must accept all agreements to continue. Please check each one and try again.",
+    "Bankruptcy date is required": "📅 Since you indicated a bankruptcy history, please provide the bankruptcy date.",
+    "An application with this Social Security Number is already being processed": "⚠️ This Social Security Number already has an active application. If this is a duplicate, please contact our support team.",
+    "You can only submit one application per 24 hours": "⏱️ You've already submitted an application today. Please wait 24 hours before submitting another one.",
+    "The Social Security Number provided is invalid": "❌ The Social Security Number you entered appears to be invalid. Please double-check and try again.",
+    "The phone number provided is invalid": "📞 The phone number you entered is invalid. Please check the format and try again.",
+    "Please use a valid, permanent email address": "✉️ The email address you provided doesn't appear to be valid. Please use a permanent, personal email address.",
+    "Your application could not be processed at this time": "🚫 Your application couldn't be approved due to risk assessment concerns. Please contact support to discuss your options.",
+    "Loan purpose must be at least 10 characters": "✍️ Please describe your loan purpose in more detail (at least 10 characters).",
+  };
+
+  // Check for exact matches first
+  for (const [key, value] of Object.entries(errorMap)) {
+    if (errorMessage.includes(key)) {
+      return value;
+    }
+  }
+
+  // If no match found, return original message (already user-friendly if it came from our code)
+  return errorMessage;
+};
 
 const US_STATES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -66,8 +211,8 @@ export default function ApplyLoan() {
     { number: 1, title: "Personal Info", description: "Basic details", status: currentStep === 1 ? "current" : currentStep > 1 ? "completed" : "upcoming" },
     { number: 2, title: "Address", description: "Where you live", status: currentStep === 2 ? "current" : currentStep > 2 ? "completed" : "upcoming" },
     { number: 3, title: "Employment", description: "Income details", status: currentStep === 3 ? "current" : currentStep > 3 ? "completed" : "upcoming" },
-    { number: 4, title: "Loan Details", description: "Amount & purpose", status: currentStep === 4 ? "current" : currentStep > 4 ? "completed" : "upcoming" },
-    { number: 5, title: "Review", description: "Agreements", status: currentStep === 5 ? "current" : currentStep > 5 ? "completed" : "upcoming" },
+    { number: 4, title: "Loan & Agreements", description: "Loan details & legal", status: currentStep === 4 ? "current" : currentStep > 4 ? "completed" : "upcoming" },
+    { number: 5, title: "Review", description: "Submit application", status: currentStep === 5 ? "current" : currentStep > 5 ? "completed" : "upcoming" },
   ];
 
   // Load saved draft from localStorage
@@ -133,8 +278,11 @@ export default function ApplyLoan() {
       
       setTimeout(() => setLocation("/dashboard"), 1500);
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to submit application");
+    onError: (error: any) => {
+      const friendlyMessage = translateErrorMessage(error);
+      toast.error(friendlyMessage, {
+        description: "Please review your information and try again.",
+      });
     },
   });
 
@@ -176,6 +324,11 @@ export default function ApplyLoan() {
       dateOfBirth: dateOfBirthISO,
       employmentStatus: formData.employmentStatus as "employed" | "self_employed" | "unemployed" | "retired",
       loanType: formData.loanType as "installment" | "short_term",
+      idType: formData.idType as "drivers_license" | "passport" | "state_id" | "military_id",
+      maritalStatus: formData.maritalStatus as "single" | "married" | "divorced" | "widowed" | "domestic_partnership",
+      citizenshipStatus: formData.citizenshipStatus as "us_citizen" | "permanent_resident",
+      dependents: parseInt(formData.dependents) || 0,
+      priorBankruptcy: (typeof formData.priorBankruptcy === 'boolean' ? formData.priorBankruptcy : formData.priorBankruptcy === 'true') ? 1 : 0,
       monthlyIncome,
       requestedAmount,
     });
@@ -391,33 +544,39 @@ export default function ApplyLoan() {
           toast.error("Minimum loan amount is $500");
           return false;
         }
-        if (!formData.loanPurpose.trim() || formData.loanPurpose.length < 5) {
-          toast.error("Please enter a loan purpose (at least 5 characters)");
+        if (!formData.loanPurpose.trim()) {
+          toast.error("Please enter a loan purpose");
+          return false;
+        }
+        if (formData.loanPurpose.trim().length < 10) {
+          toast.error(`Loan purpose too short (${formData.loanPurpose.trim().length}/10 characters). Please provide more details.`);
+          return false;
+        }
+        // Validate agreements
+        if (!formData.termsConsent) {
+          toast.error("📋 You must accept all agreements to continue. Please check each one and try again.");
+          return false;
+        }
+        if (!formData.privacyConsent) {
+          toast.error("📋 You must accept all agreements to continue. Please check each one and try again.");
+          return false;
+        }
+        if (!formData.creditCheckConsent) {
+          toast.error("📋 You must accept all agreements to continue. Please check each one and try again.");
+          return false;
+        }
+        if (!formData.loanAgreementConsent) {
+          toast.error("📋 You must accept all agreements to continue. Please check each one and try again.");
+          return false;
+        }
+        if (!formData.esignConsent) {
+          toast.error("📋 You must accept all agreements to continue. Please check each one and try again.");
           return false;
         }
         return true;
 
       case 5:
-        if (!formData.termsConsent) {
-          toast.error("You must agree to the Terms of Use");
-          return false;
-        }
-        if (!formData.privacyConsent) {
-          toast.error("You must agree to the Privacy Policy");
-          return false;
-        }
-        if (!formData.creditCheckConsent) {
-          toast.error("You must authorize the credit check");
-          return false;
-        }
-        if (!formData.loanAgreementConsent) {
-          toast.error("You must agree to the Loan Agreement");
-          return false;
-        }
-        if (!formData.esignConsent) {
-          toast.error("You must consent to electronic signatures");
-          return false;
-        }
+        // Step 5 is just review, no additional validation needed
         return true;
 
       default:
@@ -436,11 +595,7 @@ export default function ApplyLoan() {
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader2 className="h-8 w-8 animate-spin text-[#0033A0]" />
-      </div>
-    );
+    return <FullPageLoader text="Loading application..." />;
   }
 
   if (!isAuthenticated) {
@@ -892,16 +1047,21 @@ export default function ApplyLoan() {
                     </div>
 
                     <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="street">Street Address *</Label>
-                        <Input
-                          id="street"
-                          value={formData.street}
-                          onChange={(e) => updateFormData("street", e.target.value)}
-                          placeholder="123 Main Street"
-                          required
-                        />
-                      </div>
+                      <AddressAutocomplete
+                        id="street"
+                        value={formData.street}
+                        onInputChange={(value) => updateFormData("street", value)}
+                        onAddressSelect={(address) => {
+                          updateFormData("street", address.street);
+                          updateFormData("city", address.city);
+                          updateFormData("state", address.state);
+                          updateFormData("zipCode", address.zipCode);
+                        }}
+                        label="Street Address"
+                        placeholder="Start typing your address..."
+                        required
+                        apiKey={import.meta.env.VITE_GOOGLE_PLACES_API_KEY || ""}
+                      />
 
                       <div className="grid md:grid-cols-3 gap-4">
                         <div className="space-y-2">
@@ -1169,7 +1329,7 @@ export default function ApplyLoan() {
                     </div>
 
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-[#0033A0] mb-2">Before You Submit</h4>
+                      <h4 className="font-semibold text-[#0033A0] mb-2">Before You Continue</h4>
                       <ul className="space-y-1 text-sm text-gray-700">
                         <li className="flex items-start gap-2">
                           <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
@@ -1186,6 +1346,255 @@ export default function ApplyLoan() {
                       </ul>
                     </div>
 
+                    {/* Agreements Section */}
+                    <div className="border-t pt-6">
+                      <div className="mb-6">
+                        <h3 className="font-bold text-lg text-[#0033A0] mb-2">Required Agreements *</h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Please review and check each agreement before continuing:
+                        </p>
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-gray-700">
+                          <strong className="text-[#0033A0]">Important:</strong> You must accept ALL agreements to proceed to the next step
+                        </div>
+                      </div>
+
+                      <div className="space-y-5">
+                        <div className="flex gap-3 p-3 bg-gray-50 rounded border border-gray-200 hover:border-[#0033A0] transition">
+                          <input
+                            type="checkbox"
+                            id="termsConsent"
+                            checked={formData.termsConsent}
+                            onChange={(e) => updateFormData("termsConsent", e.target.checked)}
+                            className="w-5 h-5 mt-0.5 accent-[#0033A0] cursor-pointer flex-shrink-0"
+                          />
+                          <label htmlFor="termsConsent" className="flex-1 cursor-pointer">
+                            <span className="font-semibold text-gray-800 block">Terms of Service *</span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              I have read and agree to the Terms of Service and all terms & conditions
+                            </p>
+                            <a 
+                              href="/legal/terms_of_service" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-[#0033A0] hover:underline mt-2 inline-block"
+                            >
+                              View full Terms of Service →
+                            </a>
+                          </label>
+                        </div>
+
+                        <div className="flex gap-3 p-3 bg-gray-50 rounded border border-gray-200 hover:border-[#0033A0] transition">
+                          <input
+                            type="checkbox"
+                            id="privacyConsent"
+                            checked={formData.privacyConsent}
+                            onChange={(e) => updateFormData("privacyConsent", e.target.checked)}
+                            className="w-5 h-5 mt-0.5 accent-[#0033A0] cursor-pointer flex-shrink-0"
+                          />
+                          <label htmlFor="privacyConsent" className="flex-1 cursor-pointer">
+                            <span className="font-semibold text-gray-800 block">I agree to the Privacy Policy *</span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              I understand my personal information will be used as described in the Privacy Policy
+                            </p>
+                            <a 
+                              href="/legal/privacy_policy" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-[#0033A0] hover:underline font-medium mt-2 inline-block"
+                            >
+                              📄 View full Privacy Policy →
+                            </a>
+                          </label>
+                        </div>
+
+                        <div className="flex gap-3 p-3 bg-gray-50 rounded border border-gray-200 hover:border-[#0033A0] transition">
+                          <input
+                            type="checkbox"
+                            id="creditCheckConsent"
+                            checked={formData.creditCheckConsent}
+                            onChange={(e) => updateFormData("creditCheckConsent", e.target.checked)}
+                            className="w-5 h-5 mt-0.5 accent-[#0033A0] cursor-pointer flex-shrink-0"
+                          />
+                          <label htmlFor="creditCheckConsent" className="flex-1 cursor-pointer">
+                            <span className="font-semibold text-gray-800 block">I authorize a credit check *</span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              I authorize AmeriLend and its partners to perform a credit check and pull my credit report as part of the loan application process
+                            </p>
+                          </label>
+                        </div>
+
+                        <div className="flex gap-3 p-3 bg-gray-50 rounded border border-gray-200 hover:border-[#0033A0] transition">
+                          <input
+                            type="checkbox"
+                            id="loanAgreementConsent"
+                            checked={formData.loanAgreementConsent}
+                            onChange={(e) => updateFormData("loanAgreementConsent", e.target.checked)}
+                            className="w-5 h-5 mt-0.5 accent-[#0033A0] cursor-pointer flex-shrink-0"
+                          />
+                          <label htmlFor="loanAgreementConsent" className="flex-1 cursor-pointer">
+                            <span className="font-semibold text-gray-800 block">I agree to the Loan Agreement *</span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              I have reviewed and agree to the terms of the loan agreement, including interest rates, fees, and repayment terms
+                            </p>
+                            <a 
+                              href="/legal/loan_agreement" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-[#0033A0] hover:underline font-medium mt-2 inline-block"
+                            >
+                              📄 View full Loan Agreement →
+                            </a>
+                          </label>
+                        </div>
+
+                        <div className="flex gap-3 p-3 bg-gray-50 rounded border border-gray-200 hover:border-[#0033A0] transition">
+                          <input
+                            type="checkbox"
+                            id="esignConsent"
+                            checked={formData.esignConsent}
+                            onChange={(e) => updateFormData("esignConsent", e.target.checked)}
+                            className="w-5 h-5 mt-0.5 accent-[#0033A0] cursor-pointer flex-shrink-0"
+                          />
+                          <label htmlFor="esignConsent" className="flex-1 cursor-pointer">
+                            <span className="font-semibold text-gray-800 block">I consent to electronic signatures *</span>
+                            <p className="text-sm text-gray-600 mt-1">
+                              I consent to sign this agreement electronically and understand that my electronic signature is legally binding
+                            </p>
+                            <a 
+                              href="/legal/esign_consent" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-[#0033A0] hover:underline font-medium mt-2 inline-block"
+                            >
+                              📄 View E-Sign Consent →
+                            </a>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between pt-4">
+                      <Button
+                        type="button"
+                        onClick={prevStep}
+                        variant="outline"
+                        className="border-[#0033A0] text-[#0033A0]"
+                      >
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={nextStep}
+                        className="bg-[#0033A0] hover:bg-[#002080] text-white px-8"
+                      >
+                        Continue to Review
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 5: Agreements and Preferences */}
+                {currentStep === 5 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-[#0033A0] mb-2">
+                        Review & Submit
+                      </h2>
+                      <p className="text-gray-600 mb-3">
+                        Review your information and submit your application.
+                      </p>
+                    </div>
+
+                    {/* Summary Box */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-[#0033A0] mb-3">Application Summary</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Name:</span>
+                          <span className="font-medium">{formData.fullName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Email:</span>
+                          <span className="font-medium">{formData.email}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Loan Amount:</span>
+                          <span className="font-medium">${parseFloat(formData.requestedAmount || "0").toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Loan Type:</span>
+                          <span className="font-medium capitalize">{formData.loanType?.replace(/_/g, ' ')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Ready to Submit Box */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-green-800 mb-2">✓ Ready to Submit</h4>
+                      <ul className="space-y-1 text-sm text-green-700">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span>All required information has been provided</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span>All agreements have been reviewed and accepted</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <span>You will receive a decision within 24 hours</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* Contact Preference Section */}
+                    <div className="bg-gray-50 border rounded-lg p-5">
+                      <h3 className="font-bold text-[#0033A0] mb-4">Contact Preference</h3>
+                      <p className="text-sm text-gray-600 mb-4">
+                        How would you like us to contact you about your application status?
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="contactMethod"
+                            value="email"
+                            checked={formData.preferredContact === "email"}
+                            onChange={(e) => updateFormData("preferredContact", e.target.value as any)}
+                            className="w-4 h-4 accent-[#0033A0]"
+                          />
+                          <span className="text-gray-700">Email to {formData.email}</span>
+                        </label>
+                        
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="contactMethod"
+                            value="phone"
+                            checked={formData.preferredContact === "phone"}
+                            onChange={(e) => updateFormData("preferredContact", e.target.value as any)}
+                            className="w-4 h-4 accent-[#0033A0]"
+                          />
+                          <span className="text-gray-700">Call me at {formData.phone || "(not provided)"}</span>
+                        </label>
+                        
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="contactMethod"
+                            value="sms"
+                            checked={formData.preferredContact === "sms"}
+                            onChange={(e) => updateFormData("preferredContact", e.target.value as any)}
+                            className="w-4 h-4 accent-[#0033A0]"
+                          />
+                          <span className="text-gray-700">Text me at {formData.phone || "(not provided)"}</span>
+                        </label>
+                      </div>
+                    </div>
+
                     <div className="flex justify-between pt-4">
                       <Button
                         type="button"
@@ -1200,203 +1609,6 @@ export default function ApplyLoan() {
                         type="submit"
                         disabled={submitMutation.isPending}
                         className="bg-[#FFA500] hover:bg-[#FF8C00] text-white px-8"
-                      >
-                        {submitMutation.isPending ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Submitting...
-                          </>
-                        ) : (
-                          "Submit Application"
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 5: Agreements and Preferences */}
-                {currentStep === 5 && (
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-2xl font-bold text-[#0033A0] mb-2">
-                        Agreements & Preferences
-                      </h2>
-                      <p className="text-gray-600 mb-3">
-                        Please review and accept the required agreements.
-                      </p>
-                      <div className="bg-orange-50 border border-orange-200 rounded p-3 mb-4 text-sm text-gray-700">
-                        <strong className="text-[#0033A0]">Required in this step:</strong> All agreement checkboxes must be checked to proceed
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      {/* Agreements Section */}
-                      <div className="bg-gray-50 border rounded-lg p-5">
-                        <h3 className="font-bold text-[#0033A0] mb-4">Required Agreements</h3>
-                        
-                        <div className="space-y-3">
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              id="termsConsent"
-                              checked={formData.termsConsent}
-                              onChange={(e) => updateFormData("termsConsent", e.target.checked ? "true" : "false")}
-                              className="w-5 h-5 mt-1 accent-[#0033A0] cursor-pointer"
-                            />
-                            <label htmlFor="termsConsent" className="flex-1 cursor-pointer">
-                              <span className="font-semibold text-gray-700">I agree to the Terms of Use *</span>
-                              <p className="text-sm text-gray-600 mt-1">
-                                I have read and agree to the <Link to="/terms-of-use" className="text-[#0033A0] underline hover:text-[#002080]">Terms of Use</Link>
-                              </p>
-                            </label>
-                          </div>
-
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              id="privacyConsent"
-                              checked={formData.privacyConsent}
-                              onChange={(e) => updateFormData("privacyConsent", e.target.checked ? "true" : "false")}
-                              className="w-5 h-5 mt-1 accent-[#0033A0] cursor-pointer"
-                            />
-                            <label htmlFor="privacyConsent" className="flex-1 cursor-pointer">
-                              <span className="font-semibold text-gray-700">I agree to the Privacy Policy *</span>
-                              <p className="text-sm text-gray-600 mt-1">
-                                I have read and agree to the <Link to="/privacy-policy" className="text-[#0033A0] underline hover:text-[#002080]">Privacy Policy</Link> and understand how my data will be used
-                              </p>
-                            </label>
-                          </div>
-
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              id="creditCheckConsent"
-                              checked={formData.creditCheckConsent}
-                              onChange={(e) => updateFormData("creditCheckConsent", e.target.checked ? "true" : "false")}
-                              className="w-5 h-5 mt-1 accent-[#0033A0] cursor-pointer"
-                            />
-                            <label htmlFor="creditCheckConsent" className="flex-1 cursor-pointer">
-                              <span className="font-semibold text-gray-700">I authorize a credit check *</span>
-                              <p className="text-sm text-gray-600 mt-1">
-                                I authorize AmeriLend and its partners to perform a credit check and pull my credit report as part of the loan application process
-                              </p>
-                            </label>
-                          </div>
-
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              id="loanAgreementConsent"
-                              checked={formData.loanAgreementConsent}
-                              onChange={(e) => updateFormData("loanAgreementConsent", e.target.checked ? "true" : "false")}
-                              className="w-5 h-5 mt-1 accent-[#0033A0] cursor-pointer"
-                            />
-                            <label htmlFor="loanAgreementConsent" className="flex-1 cursor-pointer">
-                              <span className="font-semibold text-gray-700">I agree to the Loan Agreement *</span>
-                              <p className="text-sm text-gray-600 mt-1">
-                                I have reviewed and agree to the terms of the loan agreement, including interest rates, fees, and repayment terms
-                              </p>
-                            </label>
-                          </div>
-
-                          <div className="flex items-start gap-3">
-                            <input
-                              type="checkbox"
-                              id="esignConsent"
-                              checked={formData.esignConsent}
-                              onChange={(e) => updateFormData("esignConsent", e.target.checked ? "true" : "false")}
-                              className="w-5 h-5 mt-1 accent-[#0033A0] cursor-pointer"
-                            />
-                            <label htmlFor="esignConsent" className="flex-1 cursor-pointer">
-                              <span className="font-semibold text-gray-700">I consent to electronic signatures *</span>
-                              <p className="text-sm text-gray-600 mt-1">
-                                I consent to sign this agreement electronically and understand that my electronic signature is legally binding
-                              </p>
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Contact Preference Section */}
-                      <div className="bg-gray-50 border rounded-lg p-5">
-                        <h3 className="font-bold text-[#0033A0] mb-4">Contact Preference</h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                          How would you like us to contact you about your application status?
-                        </p>
-                        
-                        <div className="space-y-2">
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="contactMethod"
-                              value="email"
-                              checked={formData.preferredContact === "email"}
-                              onChange={(e) => updateFormData("preferredContact", e.target.value as any)}
-                              className="w-4 h-4 accent-[#0033A0]"
-                            />
-                            <span className="text-gray-700">Email to {formData.email}</span>
-                          </label>
-                          
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="contactMethod"
-                              value="phone"
-                              checked={formData.preferredContact === "phone"}
-                              onChange={(e) => updateFormData("preferredContact", e.target.value as any)}
-                              className="w-4 h-4 accent-[#0033A0]"
-                            />
-                            <span className="text-gray-700">Call me at {formData.phone || "(not provided)"}</span>
-                          </label>
-                          
-                          <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="contactMethod"
-                              value="sms"
-                              checked={formData.preferredContact === "sms"}
-                              onChange={(e) => updateFormData("preferredContact", e.target.value as any)}
-                              className="w-4 h-4 accent-[#0033A0]"
-                            />
-                            <span className="text-gray-700">Text me at {formData.phone || "(not provided)"}</span>
-                          </label>
-                        </div>
-                      </div>
-
-                      {/* Summary Box */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-[#0033A0] mb-2">Ready to Submit?</h4>
-                        <ul className="space-y-1 text-sm text-gray-700">
-                          <li className="flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                            <span>All agreements have been reviewed and accepted</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                            <span>Your contact preference has been set</span>
-                          </li>
-                          <li className="flex items-start gap-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                            <span>You will receive a decision within 24 hours</span>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between pt-4">
-                      <Button
-                        type="button"
-                        onClick={prevStep}
-                        variant="outline"
-                        className="border-[#0033A0] text-[#0033A0]"
-                      >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={submitMutation.isPending || !formData.termsConsent || !formData.privacyConsent || !formData.creditCheckConsent || !formData.loanAgreementConsent || !formData.esignConsent}
-                        className="bg-[#FFA500] hover:bg-[#FF8C00] text-white px-8 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {submitMutation.isPending ? (
                           <>

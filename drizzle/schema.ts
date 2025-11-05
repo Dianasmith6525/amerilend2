@@ -18,6 +18,12 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  // User profile fields
+  phone: varchar("phone", { length: 20 }),
+  street: varchar("street", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 2 }),
+  zipCode: varchar("zipCode", { length: 10 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -33,7 +39,7 @@ export const otpCodes = mysqlTable("otpCodes", {
   id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }).notNull(),
   code: varchar("code", { length: 6 }).notNull(),
-  purpose: mysqlEnum("purpose", ["signup", "login"]).notNull(),
+  purpose: mysqlEnum("purpose", ["signup", "login", "password_reset"]).notNull(),
   expiresAt: timestamp("expiresAt").notNull(),
   verified: int("verified").default(0).notNull(), // 0 = not verified, 1 = verified
   attempts: int("attempts").default(0).notNull(),
@@ -160,8 +166,8 @@ export const feeConfiguration = mysqlTable("feeConfiguration", {
   // Percentage mode settings (1.5% - 2.5%)
   percentageRate: int("percentageRate").default(200).notNull(), // stored as basis points (200 = 2.00%)
   
-  // Fixed fee mode settings ($1.50 - $2.50)
-  fixedFeeAmount: int("fixedFeeAmount").default(200).notNull(), // in cents (200 = $2.00)
+  // Fixed fee mode settings ($1.50 - $10.00)
+  fixedFeeAmount: int("fixedFeeAmount").default(575).notNull(), // in cents (575 = $5.75)
   
   // Metadata
   isActive: int("isActive").default(1).notNull(), // 1 = active, 0 = inactive

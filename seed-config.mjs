@@ -11,11 +11,11 @@ async function seedFeeConfiguration() {
     await db.insert(feeConfiguration).values({
       calculationMode: "percentage",
       percentageRate: 200, // 2.00%
-      fixedFeeAmount: 200, // $2.00
+      fixedFeeAmount: 575, // $5.75
       isActive: 1,
     });
     
-    console.log("✓ Default fee configuration created (2.00% percentage mode)");
+    console.log("✓ Default fee configuration created (2.00% percentage mode with $5.75 fixed fee)");
   } catch (error) {
     console.error("Error seeding configuration:", error);
   }

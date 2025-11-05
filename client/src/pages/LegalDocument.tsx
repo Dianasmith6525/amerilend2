@@ -66,15 +66,23 @@ export default function LegalDocument() {
     }
 
     // Load markdown content
+    console.log("[LegalDocument] Loading file:", metadata.file);
     fetch(metadata.file)
-      .then((res) => res.text())
+      .then((res) => {
+        console.log("[LegalDocument] Fetch response status:", res.status);
+        if (!res.ok) {
+          throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
+        }
+        return res.text();
+      })
       .then((text) => {
+        console.log("[LegalDocument] Content loaded, length:", text.length);
         setContent(text);
         setLoading(false);
       })
       .catch((error) => {
-        console.error("Error loading document:", error);
-        toast.error("Failed to load document");
+        console.error("[LegalDocument] Error loading document:", error);
+        toast.error("Failed to load document: " + error.message);
         setLoading(false);
       });
   }, [metadata, navigate]);
@@ -115,10 +123,25 @@ export default function LegalDocument() {
             <div className="flex justify-center items-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : (
+          ) : content ? (
             <>
-              <div className="prose prose-sm max-w-none mb-6">
-                <ReactMarkdown>{content}</ReactMarkdown>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6 overflow-auto max-h-96 text-gray-800">
+                <ReactMarkdown
+                  components={{
+                    h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mb-4 text-gray-900" {...props} />,
+                    h2: ({ node, ...props }) => <h2 className="text-xl font-bold mb-3 mt-4 text-gray-900" {...props} />,
+                    h3: ({ node, ...props }) => <h3 className="text-lg font-bold mb-2 mt-3 text-gray-900" {...props} />,
+                    p: ({ node, ...props }) => <p className="mb-2 text-gray-700 leading-relaxed" {...props} />,
+                    ul: ({ node, ...props }) => <ul className="list-disc list-inside mb-2 ml-2 text-gray-700" {...props} />,
+                    ol: ({ node, ...props }) => <ol className="list-decimal list-inside mb-2 ml-2 text-gray-700" {...props} />,
+                    li: ({ node, ...props }) => <li className="mb-1 text-gray-700" {...props} />,
+                    strong: ({ node, ...props }) => <strong className="font-bold text-gray-900" {...props} />,
+                    em: ({ node, ...props }) => <em className="italic text-gray-700" {...props} />,
+                    blockquote: ({ node, ...props }) => <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-700 my-2" {...props} />,
+                  }}
+                >
+                  {content}
+                </ReactMarkdown>
               </div>
 
               {hasAccepted ? (
@@ -153,6 +176,11 @@ export default function LegalDocument() {
                 </div>
               )}
             </>
+          ) : (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-yellow-800 font-medium">⚠️ Document content could not be loaded</p>
+              <p className="text-yellow-700 text-sm mt-2">Please try refreshing the page or contact support</p>
+            </div>
           )}
         </CardContent>
       </Card>

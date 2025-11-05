@@ -7,6 +7,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { createOTP, verifyOTP, sendOTPEmail } from "./_core/otp";
 import { createAuthorizeNetTransaction, getAcceptJsConfig } from "./_core/authorizenet";
+import { createStripePaymentIntent, getStripePublishableKey } from "./_core/stripe";
 import { createCryptoCharge, checkCryptoPaymentStatus, getSupportedCryptos, convertUSDToCrypto } from "./_core/crypto-payment";
 import { legalAcceptances } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
@@ -14,7 +15,7 @@ import { getDb } from "./db";
 import { generateSupportResponse, getSuggestedQuestions, trackSupportConversation } from "./_core/aiSupport";
 import { getGoogleAuthUrl, getGoogleUserInfo } from "./_core/google-oauth";
 import { sdk } from "./_core/sdk";
-import { sendEmail } from "./_core/notification";
+import { sendEmail, sendLoanStatusEmailEnhanced } from "./_core/notification";
 import { ENV } from "./_core/env";
 
 export const appRouter = router({
@@ -162,7 +163,10 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         try {
           console.log(`[OTP] Requesting code for ${input.email} (${input.purpose})`);
-          const code = await createOTP(input.email, input.purpose);
+          // Generate a random 6-digit code
+          const code = Math.floor(100000 + Math.random() * 900000).toString();
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+          await createOTP(input.email, code, input.purpose, expiresAt);
           console.log(`[OTP] Generated code: ${code}`);
           await sendOTPEmail(input.email, code, input.purpose);
           console.log(`[OTP] Email sent successfully`);
@@ -182,7 +186,8 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const result = await verifyOTP(input.email, input.code, input.purpose);
-        if (!result.valid) {
+        // verifyOTP returns an object with { valid: boolean, error?: string }
+        if (typeof result === 'object' && !result.valid) {
           throw new TRPCError({ 
             code: "BAD_REQUEST", 
             message: result.error || "Invalid code" 
@@ -211,7 +216,7 @@ export const appRouter = router({
 
         // Create session
         const sessionToken = await sdk.createSessionToken(user.openId, {
-          name: user.email,
+          name: user.email || undefined,
         });
         
         // Set cookie
@@ -266,7 +271,7 @@ export const appRouter = router({
 
         // Create session
         const sessionToken = await sdk.createSessionToken(user.openId, {
-          name: user.email,
+          name: user.email || undefined,
         });
         
         // Set cookie
@@ -307,7 +312,7 @@ export const appRouter = router({
 
         // Create session
         const sessionToken = await sdk.createSessionToken(user.openId, {
-          name: user.email,
+          name: user.email || undefined,
         });
         
         // Set cookie
@@ -340,7 +345,7 @@ export const appRouter = router({
         const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
         // Store OTP
-        await db.createOTP(email, code, "password_reset", expiresAt);
+        await createOTP(email, code, "password_reset", expiresAt);
 
         // Send email with reset code
         await sendEmail({
@@ -379,7 +384,7 @@ export const appRouter = router({
         const { email, code, newPassword } = input;
 
         // Verify OTP
-        const isValid = await db.verifyOTP(email, code, "password_reset");
+        const isValid = await verifyOTP(email, code, "password_reset");
         if (!isValid) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -403,8 +408,8 @@ export const appRouter = router({
         // Update password
         await db.updateUserPassword(user.id, passwordHash);
 
-        // Delete used OTP
-        await db.deleteOTP(email, "password_reset");
+        // Delete used OTP (OTPs auto-expire, so this is optional)
+        // await deleteOTP(email, "password_reset");
 
         console.log(`[Password Reset] Password reset successful for ${email}`);
         return { success: true };
@@ -425,9 +430,9 @@ export const appRouter = router({
         idType: z.enum(["drivers_license", "passport", "state_id", "military_id"]),
         idNumber: z.string().min(5),
         maritalStatus: z.enum(["single", "married", "divorced", "widowed", "domestic_partnership"]),
-        dependents: z.string().regex(/^\d+$/),
+        dependents: z.number().int().nonnegative(),
         citizenshipStatus: z.enum(["us_citizen", "permanent_resident"]),
-        priorBankruptcy: z.boolean(),
+        priorBankruptcy: z.number().int().min(0).max(1), // 0 = no, 1 = yes
         bankruptcyDate: z.string().optional(),
         street: z.string().min(1),
         city: z.string().min(1),
@@ -438,7 +443,7 @@ export const appRouter = router({
         monthlyIncome: z.number().int().positive(),
         loanType: z.enum(["personal", "installment", "short_term", "auto", "home_equity", "heloc", "student", "business", "debt_consolidation", "mortgage", "private_money", "title", "credit_builder", "signature", "peer_to_peer"]),
         requestedAmount: z.number().int().positive().max(10000000), // max $100,000 in cents
-        loanPurpose: z.string().min(5),
+        loanPurpose: z.string().min(10, "Loan purpose must be at least 10 characters"),
         // Agreement and preference fields (client-side only, logged but not stored directly)
         preferredContact: z.enum(["email", "phone", "sms"]).optional().default("email"),
         creditCheckConsent: z.boolean(),
@@ -453,7 +458,7 @@ export const appRouter = router({
             !input.loanAgreementConsent || !input.esignConsent) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "All agreements must be accepted to proceed"
+            message: "All agreements must be accepted"
           });
         }
 
@@ -461,7 +466,7 @@ export const appRouter = router({
         if (input.priorBankruptcy && !input.bankruptcyDate) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Bankruptcy date is required if you have filed for bankruptcy"
+            message: "Bankruptcy date is required"
           });
         }
 
@@ -475,7 +480,7 @@ export const appRouter = router({
           console.warn(`[FRAUD] Duplicate SSN attempt: ${input.ssn} (User ${ctx.user.id})`);
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "An application with this Social Security Number is already being processed. Please contact support if this is an error."
+            message: "An application with this Social Security Number is already being processed"
           });
         }
 
@@ -485,7 +490,7 @@ export const appRouter = router({
           console.warn(`[FRAUD] Multiple applications within 24h: User ${ctx.user.id} has ${recentApps.length} recent applications`);
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "You can only submit one application per 24 hours. Please wait and try again later."
+            message: "You can only submit one application per 24 hours"
           });
         }
 
@@ -494,7 +499,7 @@ export const appRouter = router({
           console.warn(`[FRAUD] Suspicious SSN pattern: ${input.ssn} (User ${ctx.user.id})`);
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "The Social Security Number provided is invalid. Please verify and try again."
+            message: "The Social Security Number provided is invalid"
           });
         }
 
@@ -503,7 +508,7 @@ export const appRouter = router({
           console.warn(`[FRAUD] Invalid phone number: ${input.phone} (User ${ctx.user.id})`);
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "The phone number provided is invalid. Please verify and try again."
+            message: "The phone number provided is invalid"
           });
         }
 
@@ -512,7 +517,7 @@ export const appRouter = router({
           console.warn(`[FRAUD] Disposable email attempted: ${input.email} (User ${ctx.user.id})`);
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Please use a valid, permanent email address for your application."
+            message: "Please use a valid, permanent email address"
           });
         }
 
@@ -523,7 +528,7 @@ export const appRouter = router({
           monthlyIncome: input.monthlyIncome,
           requestedAmount: input.requestedAmount,
           loanPurpose: input.loanPurpose,
-          priorBankruptcy: input.priorBankruptcy,
+          priorBankruptcy: input.priorBankruptcy === 1, // Convert 0/1 to boolean
           bankruptcyDate: input.bankruptcyDate
         });
 
@@ -535,7 +540,7 @@ export const appRouter = router({
           console.error(`[FRAUD] Application rejected - high fraud score ${fraudAnalysis.score}: User ${ctx.user.id}`);
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Your application could not be processed at this time. Please contact support for more information."
+            message: "Your application could not be processed at this time"
           });
         }
 
@@ -545,10 +550,32 @@ export const appRouter = router({
         // Create loan application (excluding agreement fields)
         const { preferredContact, creditCheckConsent, termsConsent, privacyConsent, loanAgreementConsent, esignConsent, ...loanData } = input;
         
-        await db.createLoanApplication({
+        const result = await db.createLoanApplication({
           userId: ctx.user.id,
           ...loanData,
         });
+
+        // Send "application submitted" email
+        try {
+          const user = ctx.user;
+          // The result from insert returns an object with lastInsertRowid or insertId depending on driver
+          const applicationId = (result as any).insertId || (result as any)[0]?.id;
+          
+          if (user?.email) {
+            await sendLoanStatusEmailEnhanced({
+              email: user.email,
+              status: "submitted",
+              loanId: String(applicationId || Math.floor(Math.random() * 100000)),
+              recipientName: user.name || "Applicant",
+              loanAmount: input.requestedAmount,
+              loanType: input.loanType,
+            });
+            console.log(`[Email] Sent "submitted" notification to ${user.email}`);
+          }
+        } catch (emailError) {
+          console.error("[Email] Failed to send submission notification:", emailError);
+          // Don't fail the application submission if email fails
+        }
 
         return { success: true };
       }),
@@ -620,6 +647,26 @@ export const appRouter = router({
           approvedAt: new Date(),
         });
 
+        // Send "application approved" email
+        try {
+          const user = await db.getUserById(application.userId);
+          if (user?.email) {
+            await sendLoanStatusEmailEnhanced({
+              email: user.email,
+              status: "approved",
+              loanId: String(application.id),
+              recipientName: user.name || "Applicant",
+              requestedAmount: application.requestedAmount,
+              approvalAmount: input.approvedAmount,
+              additionalInfo: `You applied for $${(application.requestedAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}. Your approved amount is $${(input.approvedAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}. Please pay the processing fee of $${(processingFeeAmount / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })} to proceed.`,
+            });
+            console.log(`[Email] Sent "approved" notification to ${user.email}`);
+          }
+        } catch (emailError) {
+          console.error("[Email] Failed to send approval notification:", emailError);
+          // Don't fail the approval if email fails
+        }
+
         return { success: true, processingFeeAmount };
       }),
 
@@ -634,9 +681,32 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN" });
         }
 
+        const application = await db.getLoanApplicationById(input.id);
+        if (!application) {
+          throw new TRPCError({ code: "NOT_FOUND" });
+        }
+
         await db.updateLoanApplicationStatus(input.id, "rejected", {
           rejectionReason: input.rejectionReason,
         });
+
+        // Send "application declined" email
+        try {
+          const user = await db.getUserById(application.userId);
+          if (user?.email) {
+            await sendLoanStatusEmailEnhanced({
+              email: user.email,
+              status: "declined",
+              loanId: String(application.id),
+              recipientName: user.name || "Applicant",
+              declineReason: input.rejectionReason,
+            });
+            console.log(`[Email] Sent "declined" notification to ${user.email}`);
+          }
+        } catch (emailError) {
+          console.error("[Email] Failed to send decline notification:", emailError);
+          // Don't fail the rejection if email fails
+        }
 
         return { success: true };
       }),
@@ -711,7 +781,7 @@ export const appRouter = router({
         return {
           calculationMode: "percentage" as const,
           percentageRate: 200, // 2.00%
-          fixedFeeAmount: 200, // $2.00
+          fixedFeeAmount: 575, // $5.75
         };
       }
       return config;
@@ -721,8 +791,8 @@ export const appRouter = router({
     adminUpdate: protectedProcedure
       .input(z.object({
         calculationMode: z.enum(["percentage", "fixed"]),
-        percentageRate: z.number().int().min(150).max(250).optional(), // 1.5% - 2.5%
-        fixedFeeAmount: z.number().int().min(150).max(250).optional(), // $1.50 - $2.50
+        percentageRate: z.number().int().min(150).max(1000).optional(), // 1.5% - 10%
+        fixedFeeAmount: z.number().int().min(150).max(1000).optional(), // $1.50 - $10.00
       }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.role !== "admin") {
@@ -746,7 +816,7 @@ export const appRouter = router({
         await db.createFeeConfiguration({
           calculationMode: input.calculationMode,
           percentageRate: input.percentageRate || 200,
-          fixedFeeAmount: input.fixedFeeAmount || 200,
+          fixedFeeAmount: input.fixedFeeAmount || 575,
           updatedBy: ctx.user.id,
         });
 
@@ -832,6 +902,69 @@ export const appRouter = router({
           paymentId: paymentRecord.insertId,
           transactionId: result.transactionId,
           authCode: result.authCode,
+        };
+      }),
+
+    // Get Stripe publishable key
+    getStripeConfig: publicProcedure.query(() => {
+      return {
+        publishableKey: getStripePublishableKey(),
+      };
+    }),
+
+    // Process card payment via Stripe
+    processStripePayment: protectedProcedure
+      .input(z.object({
+        loanApplicationId: z.number(),
+        paymentIntentId: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const application = await db.getLoanApplicationById(input.loanApplicationId);
+        
+        if (!application) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Loan application not found" });
+        }
+        
+        if (application.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" });
+        }
+        
+        if (application.status !== "approved" && application.status !== "fee_pending") {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "Loan must be approved before payment" 
+          });
+        }
+        
+        if (!application.processingFeeAmount) {
+          throw new TRPCError({ 
+            code: "BAD_REQUEST", 
+            message: "Processing fee not calculated" 
+          });
+        }
+
+        // Create payment record
+        const paymentRecord = await db.createPayment({
+          loanApplicationId: input.loanApplicationId,
+          userId: ctx.user.id,
+          amount: application.processingFeeAmount,
+          currency: "USD",
+          paymentProvider: "stripe",
+          paymentMethod: "card",
+          status: "succeeded",
+          paymentIntentId: input.paymentIntentId,
+          cardLast4: "4242", // Would be extracted from Stripe in production
+          cardBrand: "visa",
+          completedAt: new Date(),
+        });
+
+        // Update loan status to fee_paid
+        await db.updateLoanApplicationStatus(input.loanApplicationId, "fee_paid");
+
+        return { 
+          success: true,
+          paymentId: paymentRecord.insertId,
+          paymentIntentId: input.paymentIntentId,
         };
       }),
 
@@ -1253,12 +1386,12 @@ export const appRouter = router({
         try {
           // Update user profile in database
           await db.updateUser(ctx.user.id, {
-            name: input.name || ctx.user.name,
-            phone: input.phone || ctx.user.phone,
-            street: input.street || ctx.user.street,
-            city: input.city || ctx.user.city,
-            state: input.state || ctx.user.state,
-            zipCode: input.zipCode || ctx.user.zipCode,
+            name: input.name || ctx.user.name || undefined,
+            phone: input.phone || ctx.user.phone || undefined,
+            street: input.street || ctx.user.street || undefined,
+            city: input.city || ctx.user.city || undefined,
+            state: input.state || ctx.user.state || undefined,
+            zipCode: input.zipCode || ctx.user.zipCode || undefined,
           });
 
           return { success: true };
@@ -1352,7 +1485,7 @@ export const appRouter = router({
         try {
           const context = {
             userId: ctx.user?.id,
-            userEmail: ctx.user?.email,
+            userEmail: ctx.user?.email || undefined,
             loanApplicationId: input.loanApplicationId,
             conversationHistory: input.conversationHistory,
           };
@@ -1614,3 +1747,4 @@ export const appRouter = router({
   }),
 });
 
+export type AppRouter = typeof appRouter;

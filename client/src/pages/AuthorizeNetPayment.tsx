@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
+import { FullPageLoader } from "@/components/ui/loader";
 import { CheckCircle2, Loader2, CreditCard, ShieldCheck, Bitcoin, DollarSign, PartyPopper, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation, useRoute } from "wouter";
@@ -191,11 +192,7 @@ export default function AuthorizeNetPaymentPage() {
   };
 
   if (authLoading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <FullPageLoader text="Loading payment details..." />;
   }
 
   if (!isAuthenticated) {

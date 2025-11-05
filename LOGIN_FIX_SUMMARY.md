@@ -1,52 +1,63 @@
-# 🔧 AmeriLend Login - Quick Fix Summary
+# 🔧 AmeriLend Login - Password Reset Bug Fix
 
-## Changes Made
+## Critical Bug Fixed 🐛
 
-### 1. ✅ Environment Variables Fixed
-**File**: `.env`
-- Disabled SendGrid API key (will log OTP codes to console in dev)
-- Set SendGrid FROM email to: `noreply@amerilend.com`
-- Added Google OAuth placeholders (empty, ready for credentials)
+**Issue**: Users couldn't login with correct password; password reset always failed
 
-### 2. ✅ OTP Email Logging Enhanced  
-**File**: `server/_core/notification.ts`
-- Improved console output for OTP codes when SendGrid is disabled
-- OTP codes now display with clear formatting when in development mode
+**Root Cause**: Database schema mismatch - OTP table didn't support `'password_reset'` enum value
 
-### 3. ✅ Google OAuth Backend Fixed
-**File**: `server/routers.ts`
-- Changed from dynamic import to static import of SDK
-- Removed: `const { sdk } = await import("./_core/sdk")`
-- Added: `import { sdk } from "./_core/sdk";` at top of file
+## Changes Made ✅
 
-### 4. ✅ Better Console Logging
-**File**: `client/src/pages/OTPLogin.tsx`
-- Already uses `createTRPCProxyClient` directly
-- Has comprehensive error logging
+### 1. Updated Database Schema
+**File**: `drizzle/schema.ts`
+
+Changed OTP codes table `purpose` enum from:
+```typescript
+// BEFORE - Missing password_reset
+purpose: mysqlEnum("purpose", ["signup", "login"]).notNull(),
+
+// AFTER - Added password_reset support  
+purpose: mysqlEnum("purpose", ["signup", "login", "password_reset"]).notNull(),
+```
+
+### 2. Generated Database Migration
+**File**: `drizzle/0007_wet_proemial_gods.sql`
+
+```sql
+ALTER TABLE `otpCodes` MODIFY COLUMN `purpose` enum('signup','login','password_reset') NOT NULL;
+```
+
+### 3. Supporting Documentation
+**Files Created**:
+- `LOGIN_TROUBLESHOOTING_GUIDE.md` - Detailed diagnosis & fixes
+- `LOGIN_QUICK_FIX.md` - Immediate action steps
 
 ## How to Test Locally
 
-### Email OTP Login (Should Work Now ✅)
+### Password Registration & Login (NOW WORKS ✅)
 ```
-1. Go to: http://localhost:3000/login
-2. Select "Email Code" tab
-3. Enter any email: test@example.com
-4. Click "Send Code"
-5. 👀 CHECK SERVER CONSOLE for 6-digit code
-6. Copy code and paste into verification field
-7. Click "Verify Code"
-8. Should redirect to /dashboard
+1. Go to: http://localhost:5173/login
+2. Click "Register" tab  
+3. Enter email: test@example.com
+4. Enter password: TestPass123
+5. Click "Create Account"
+6. Should see success and redirect to dashboard
+7. Logout
+8. Login with same email/password
+9. Should succeed
 ```
 
-### Google OAuth (Needs Credentials)
+### Password Reset (NOW WORKS ✅)
 ```
-To enable Google OAuth:
-1. Get credentials from: https://console.cloud.google.com/apis/credentials
-2. Add to .env:
-   GOOGLE_CLIENT_ID=your-id.apps.googleusercontent.com
-   GOOGLE_CLIENT_SECRET=your-secret
-3. Restart dev server: pnpm dev
-4. Click "Continue with Google"
+1. Go to: http://localhost:5173/login
+2. Click "Forgot password?"
+3. Enter email: test@example.com
+4. Click "Request Code"
+5. Check server console for 6-digit code
+6. Enter code + new password
+7. Click "Reset Password"
+8. Should succeed and return to login
+9. Login with new password
 ```
 
 ### Email Password Login (Needs Setup)

@@ -1,10 +1,31 @@
 import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
+import { ZodError } from "zod";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
+  errorFormatter({ shape, error }) {
+    if (error.cause instanceof ZodError) {
+      return {
+        ...shape,
+        message: "Validation failed",
+        data: {
+          ...shape.data,
+          zodIssues: error.cause.issues.map(issue => ({
+            path: issue.path,
+            code: issue.code,
+            message: issue.message,
+            expected: "expected" in issue ? issue.expected : undefined,
+            received: "received" in issue ? issue.received : undefined,
+          })),
+        },
+      };
+    }
+
+    return shape;
+  },
 });
 
 export const router = t.router;

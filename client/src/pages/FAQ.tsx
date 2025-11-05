@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
+import { CodeButton } from "@/components/ui/CodeButton";
 import { Link } from "wouter";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ArrowRight } from "lucide-react";
 
 export default function FAQ() {
   const faqs = [
@@ -175,9 +176,9 @@ export default function FAQ() {
             <p className="text-gray-700 mb-6">Our customer support team is ready to help you.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="tel:945-212-1609" className="inline-block">
-                <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white font-semibold px-8 py-6 w-full sm:w-auto">
+                <CodeButton className="btn-lg w-full sm:w-auto">
                   Call (945) 212-1609
-                </Button>
+                </CodeButton>
               </a>
               <a href="mailto:support@amerilend.com" className="inline-block">
                 <Button variant="outline" className="border-[#0033A0] text-[#0033A0] hover:bg-[#0033A0] hover:text-white px-8 py-6 w-full sm:w-auto">
@@ -190,9 +191,9 @@ export default function FAQ() {
           <div className="flex gap-4 mt-12">
             <Link href="/apply">
               <a className="inline-block">
-                <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white font-semibold px-8 py-6">
+                <CodeButton className="btn-lg" icon={<ArrowRight />}>
                   Apply Now
-                </Button>
+                </CodeButton>
               </a>
             </Link>
             <Link href="/">

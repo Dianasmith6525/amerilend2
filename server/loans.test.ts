@@ -20,7 +20,7 @@ describe("Loan Application Workflow", () => {
         id: 1,
         calculationMode: "percentage" as const,
         percentageRate: 200, // 2.00% in basis points
-        fixedFeeAmount: 200,
+        fixedFeeAmount: 575,
         isActive: 1,
         updatedBy: null,
         createdAt: new Date(),
@@ -56,7 +56,7 @@ describe("Loan Application Workflow", () => {
         id: 1,
         calculationMode: "fixed" as const,
         percentageRate: 200,
-        fixedFeeAmount: 250, // $2.50
+        fixedFeeAmount: 575, // $5.75
         isActive: 1,
         updatedBy: null,
         createdAt: new Date(),
@@ -68,7 +68,7 @@ describe("Loan Application Workflow", () => {
       const approvedAmount = 100000; // $1,000.00
       const fee = mockFeeConfig.fixedFeeAmount;
 
-      expect(fee).toBe(250); // $2.50 in cents
+      expect(fee).toBe(575); // $5.75 in cents
     });
 
     it("should default to 2% if no fee configuration exists", () => {

@@ -132,12 +132,20 @@ export default function OTPLogin() {
   };
 
   const passwordLoginMutation = trpc.password.login.useMutation({
-    onSuccess: () => {
-      toast.success("Login successful!");
-      window.location.href = "/dashboard";
+    onSuccess: (data) => {
+      toast.success(`✅ Welcome back, ${data.user?.email?.split('@')[0] || 'User'}!`, {
+        description: 'Redirecting to your dashboard...',
+        duration: 2000,
+      });
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     },
     onError: (error) => {
-      toast.error(error.message || "Invalid email or password");
+      toast.error("❌ Login Failed", {
+        description: error.message || "Invalid email or password",
+        duration: 4000,
+      });
     },
   });
 
@@ -152,13 +160,21 @@ export default function OTPLogin() {
   });
 
   const verifyCodeMutation = trpc.otp.verifyCode.useMutation({
-    onSuccess: () => {
-      toast.success("Login successful!");
+    onSuccess: (data) => {
+      toast.success(`✅ Welcome, ${data.user?.email?.split('@')[0] || 'User'}!`, {
+        description: 'Your email has been verified. Redirecting...',
+        duration: 2000,
+      });
       // Reload to refresh auth state, then redirect to dashboard
-      window.location.href = "/dashboard";
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     },
     onError: (error) => {
-      toast.error(error.message || "Invalid code");
+      toast.error("❌ Verification Failed", {
+        description: error.message || "Invalid code",
+        duration: 4000,
+      });
     },
   });
 
@@ -174,7 +190,10 @@ export default function OTPLogin() {
 
   const resetPasswordMutation = trpc.password.resetPassword.useMutation({
     onSuccess: () => {
-      toast.success("Password reset successful! Please login with your new password.");
+      toast.success("✅ Password Reset Successfully!", {
+        description: "Your password has been updated. Please login with your new password.",
+        duration: 3000,
+      });
       setStep("email");
       setResetCode("");
       setNewPassword("");
@@ -182,7 +201,10 @@ export default function OTPLogin() {
       setLoginMethod("password");
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to reset password");
+      toast.error("❌ Password Reset Failed", {
+        description: error.message || "Failed to reset password",
+        duration: 4000,
+      });
     },
   });
 
@@ -252,6 +274,14 @@ export default function OTPLogin() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4">
+      {/* Back to Home Button */}
+      <Link href="/">
+        <button className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-[#0033A0] hover:bg-gray-100 rounded-lg transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium">Back Home</span>
+        </button>
+      </Link>
+
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">

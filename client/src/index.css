@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./styles/checkbox.css";
+@import "./styles/animations.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -258,4 +260,77 @@
 
 [style*="animation-delay: 0.6s"] {
   animation-delay: 0.6s;
+}
+
+/* Loader Styles */
+.loader {
+	--loader-size: calc(var(--block-size) / 2);
+	--loader-size-half: calc(var(--loader-size) / 2);
+	--loader-size-half-neg: calc(var(--loader-size-half) * -1);
+	--light-color: rgba(255, 255, 255, 0.3);
+  --dot-size: 5px;
+  --dot-size-half: calc(var(--dot-size) / 2);
+  --dot-size-half-neg: calc(var(--dot-size-half) * -1);
+	--block-size: 120px; /* Default size */
+	
+	display: block;
+	position: relative;
+	width: var(--loader-size);
+	display: grid;
+	place-items: center;
+	color: #0033A0; /* Primary brand color */
+}
+
+.loader::before,
+.loader::after {
+	content: '';
+	position: absolute;
+}
+
+/* Loader 2 - Horizontal sliding dots */
+.loader--2 {
+	--loader-size: calc(var(--block-size) / 3);
+	--anim-duration: 1s;
+	height: var(--dot-size);
+	width: calc(var(--loader-size) * 2 + var(--dot-size) * 2);
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.loader--2::before,
+.loader--2::after {
+	width: var(--dot-size);
+	height: var(--dot-size);
+	background: currentColor;
+	border-radius: 50%;
+	position: absolute;
+	animation: loader-2 var(--anim-duration) cubic-bezier(0.27, 0.08, 0.26, 0.7) infinite;
+}
+
+.loader--2::before {
+	left: 0;
+	animation-delay: 0s;
+}
+
+.loader--2::after {
+	right: 0;
+	animation-delay: calc(var(--anim-duration) / -3);
+}
+
+@keyframes loader-2 {
+	0%, 100% {
+		transform: translateX(0);
+		opacity: 1;
+	}
+	
+	44% {
+		transform: translateX(calc(var(--loader-size) + var(--dot-size-half)));
+		opacity: 0.5;
+	}
+	
+	50% {
+		opacity: 0.2;
+	}
 }

@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Settings, DollarSign, CheckCircle, XCircle, Send, ArrowLeft, PartyPopper } from "lucide-react";
+import { Loader2, Settings, DollarSign, CheckCircle, XCircle, Send, ArrowLeft, PartyPopper, Eye, MapPin, Briefcase, User, Calendar, FileText, AlertCircle } from "lucide-react";
 import { useState } from "react";
+import { FullPageLoader, Loader } from "@/components/ui/loader";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -66,7 +67,13 @@ export default function AdminDashboard() {
   // Fee config state
   const [feeMode, setFeeMode] = useState<"percentage" | "fixed">("percentage");
   const [percentageRate, setPercentageRate] = useState("2.00");
-  const [fixedFeeAmount, setFixedFeeAmount] = useState("2.00");
+  const [fixedFeeAmount, setFixedFeeAmount] = useState("5.75");
+
+  // Customer details dialog state
+  const [customerDetailsDialog, setCustomerDetailsDialog] = useState<{ open: boolean; application: any | null }>({
+    open: false,
+    application: null,
+  });
 
   const { data: applications, isLoading } = trpc.loans.adminList.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
@@ -226,8 +233,8 @@ export default function AdminDashboard() {
       });
     } else {
       const amount = parseFloat(fixedFeeAmount);
-      if (isNaN(amount) || amount < 1.5 || amount > 2.5) {
-        toast.error("Fixed fee must be between $1.50 and $2.50");
+      if (isNaN(amount) || amount < 1.5 || amount > 10.0) {
+        toast.error("Fixed fee must be between $1.50 and $10.00");
         return;
       }
       updateFeeConfigMutation.mutate({
@@ -238,11 +245,7 @@ export default function AdminDashboard() {
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <FullPageLoader text="Verifying admin access..." />;
   }
 
   if (!isAuthenticated || user?.role !== "admin") {
@@ -317,7 +320,7 @@ export default function AdminDashboard() {
             <TabsContent value="applications" className="space-y-6">
               {isLoading ? (
                 <div className="flex justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <Loader text="Loading applications..." />
                 </div>
               ) : applications && applications.length > 0 ? (
                 <div className="space-y-4">
@@ -393,6 +396,15 @@ export default function AdminDashboard() {
                         )}
 
                         <div className="flex gap-2 pt-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setCustomerDetailsDialog({ open: true, application: app })}
+                            className="bg-blue-50 hover:bg-blue-100"
+                          >
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Full Details
+                          </Button>
                           {(app.status === "pending" || app.status === "under_review") && (
                             <>
                               <Button
@@ -594,7 +606,7 @@ export default function AdminDashboard() {
                     ) : (
                       <div className="space-y-2">
                         <Label htmlFor="fixedFeeAmount">
-                          Fixed Fee Amount ($1.50 - $2.50)
+                          Fixed Fee Amount ($1.50 - $10.00)
                         </Label>
                         <div className="flex items-center gap-2">
                           <span className="text-muted-foreground">$</span>
@@ -603,7 +615,7 @@ export default function AdminDashboard() {
                             type="number"
                             step="0.01"
                             min="1.5"
-                            max="2.5"
+                            max="10.0"
                             value={fixedFeeAmount}
                             onChange={(e) => setFixedFeeAmount(e.target.value)}
                           />
@@ -907,6 +919,269 @@ export default function AdminDashboard() {
               ) : (
                 "Initiate Disbursement"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Customer Full Details Dialog */}
+      <Dialog open={customerDetailsDialog.open} onOpenChange={(open) => {
+        if (!open) setCustomerDetailsDialog({ open: false, application: null });
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Customer Full Information</DialogTitle>
+            <DialogDescription>
+              Complete application and customer details
+            </DialogDescription>
+          </DialogHeader>
+
+          {customerDetailsDialog.application && (
+            <div className="space-y-6">
+              {/* Personal Information */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Personal Information
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Full Name</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.fullName}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Middle Initial</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.middleInitial || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-semibold break-all">{customerDetailsDialog.application.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Phone</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.phone}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Date of Birth</p>
+                    <p className="font-semibold">{new Date(customerDetailsDialog.application.dateOfBirth).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Marital Status</p>
+                    <p className="font-semibold capitalize">{customerDetailsDialog.application.maritalStatus?.replace(/_/g, ' ')}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Identification */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Identification
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">SSN</p>
+                    <p className="font-semibold font-mono">{customerDetailsDialog.application.ssn}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">ID Type</p>
+                    <p className="font-semibold capitalize">{customerDetailsDialog.application.idType?.replace(/_/g, ' ')}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">ID Number</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.idNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Citizenship Status</p>
+                    <p className="font-semibold capitalize">{customerDetailsDialog.application.citizenshipStatus?.replace(/_/g, ' ')}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Dependents</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.dependents}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address Information */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Address
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Street</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.street}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">City</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.city}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">State</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.state}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">ZIP Code</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.zipCode}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Employment Information */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Briefcase className="w-4 h-4" />
+                    Employment
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Employment Status</p>
+                    <p className="font-semibold capitalize">{customerDetailsDialog.application.employmentStatus?.replace(/_/g, ' ')}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Employer</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.employer || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Monthly Income</p>
+                    <p className="font-semibold">${(customerDetailsDialog.application.monthlyIncome / 100).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bankruptcy Information */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    Financial History
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Prior Bankruptcy</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.priorBankruptcy ? 'Yes' : 'No'}</p>
+                  </div>
+                  {customerDetailsDialog.application.priorBankruptcy && customerDetailsDialog.application.bankruptcyDate && (
+                    <div>
+                      <p className="text-muted-foreground">Bankruptcy Date</p>
+                      <p className="font-semibold">{new Date(customerDetailsDialog.application.bankruptcyDate).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Loan Details */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Loan Details
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Loan Type</p>
+                    <p className="font-semibold capitalize">{customerDetailsDialog.application.loanType?.replace(/_/g, ' ')}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Requested Amount</p>
+                    <p className="font-semibold text-blue-600">${(customerDetailsDialog.application.requestedAmount / 100).toLocaleString()}</p>
+                  </div>
+                  {customerDetailsDialog.application.approvedAmount && (
+                    <div>
+                      <p className="text-muted-foreground">Approved Amount</p>
+                      <p className="font-semibold text-green-600">${(customerDetailsDialog.application.approvedAmount / 100).toLocaleString()}</p>
+                    </div>
+                  )}
+                  {customerDetailsDialog.application.processingFeeAmount && (
+                    <div>
+                      <p className="text-muted-foreground">Processing Fee</p>
+                      <p className="font-semibold">${(customerDetailsDialog.application.processingFeeAmount / 100).toFixed(2)}</p>
+                    </div>
+                  )}
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground">Loan Purpose</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.loanPurpose}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status & Dates */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Timeline
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Status</p>
+                    <Badge className={statusColors[(customerDetailsDialog.application?.status || 'pending') as keyof typeof statusColors]}>
+                      {customerDetailsDialog.application?.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Application Date</p>
+                    <p className="font-semibold">{new Date(customerDetailsDialog.application.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  {customerDetailsDialog.application.approvedAt && (
+                    <div>
+                      <p className="text-muted-foreground">Approved Date</p>
+                      <p className="font-semibold">{new Date(customerDetailsDialog.application.approvedAt).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  {customerDetailsDialog.application.disbursedAt && (
+                    <div>
+                      <p className="text-muted-foreground">Disbursed Date</p>
+                      <p className="font-semibold">{new Date(customerDetailsDialog.application.disbursedAt).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Admin Notes */}
+              {customerDetailsDialog.application.adminNotes && (
+                <div className="space-y-4">
+                  <div className="border-b pb-3">
+                    <h3 className="font-semibold">Admin Notes</h3>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm">
+                    <p>{customerDetailsDialog.application.adminNotes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Rejection Reason */}
+              {customerDetailsDialog.application.rejectionReason && (
+                <div className="space-y-4">
+                  <div className="border-b pb-3">
+                    <h3 className="font-semibold text-red-600">Rejection Reason</h3>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded p-4 text-sm">
+                    <p>{customerDetailsDialog.application.rejectionReason}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setCustomerDetailsDialog({ open: false, application: null })}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

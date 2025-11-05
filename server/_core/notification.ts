@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { ENV } from "./env";
 import sgMail from "@sendgrid/mail";
 import twilio from "twilio";
+import { getLoanEmailTemplate, LoanEmailData } from "./loanEmailTemplates";
 
 // Initialize SendGrid
 if (ENV.SENDGRID_API_KEY) {
@@ -546,6 +547,67 @@ export async function sendLoanStatusEmail(
     return true;
   } catch (error) {
     console.error("[Loan Status Email] Failed to send:", error);
+    return false;
+  }
+}
+
+/**
+ * Send enhanced loan status email using professional templates
+ * This function sends beautifully formatted HTML emails with proper branding
+ * for submitted, approved, more_info, and declined statuses.
+ */
+export async function sendLoanStatusEmailEnhanced(data: {
+  email: string;
+  status: "submitted" | "approved" | "more_info" | "declined";
+  loanId: string;
+  recipientName: string;
+  loanAmount?: number;
+  loanType?: string;
+  approvalAmount?: number;
+  declineReason?: string;
+  additionalInfo?: string; // For more_info: what info is needed
+}): Promise<boolean> {
+  if (!ENV.SENDGRID_API_KEY || !ENV.SENDGRID_FROM_EMAIL) {
+    console.log(
+      `[Enhanced Loan Status Email] Would send to ${data.email}: Status ${data.status}`
+    );
+    return false;
+  }
+
+  try {
+    const emailData: LoanEmailData = {
+      type: data.status,
+      recipientEmail: data.email,
+      recipientName: data.recipientName,
+      loanId: data.loanId,
+      loanAmount: data.loanAmount,
+      loanType: data.loanType,
+      approvalAmount: data.approvalAmount,
+      declineReason: data.declineReason,
+      additionalInfo: data.additionalInfo,
+    };
+
+    const template = getLoanEmailTemplate(emailData);
+
+    await sgMail.send({
+      to: data.email,
+      from: {
+        email: ENV.SENDGRID_FROM_EMAIL,
+        name: "AmeriLend",
+      },
+      replyTo: ENV.SENDGRID_FROM_EMAIL,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+      categories: ["loan-status-update", data.status],
+    });
+
+    console.log(
+      `[Enhanced Loan Status Email] Sent ${data.status} notification to ${data.email}`
+    );
+    return true;
+  } catch (error) {
+    console.error("[Enhanced Loan Status Email] Failed to send:", error);
     return false;
   }
 }
