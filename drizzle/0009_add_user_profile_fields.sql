@@ -1,7 +1,8 @@
 -- Custom SQL migration file, put your code below! --
-ALTER TABLE `users` 
-ADD COLUMN `phone` varchar(20),
-ADD COLUMN `street` varchar(255),
-ADD COLUMN `city` varchar(100),
-ADD COLUMN `state` varchar(2),
-ADD COLUMN `zipCode` varchar(10);
+-- Old columns already exist in database, keeping migration for history
+-- ALTER TABLE `users` 
+-- ADD COLUMN `phone` varchar(20),
+-- ADD COLUMN `street` varchar(255),
+-- ADD COLUMN `city` varchar(100),
+-- ADD COLUMN `state` varchar(2),
+-- ADD COLUMN `zipCode` varchar(10);

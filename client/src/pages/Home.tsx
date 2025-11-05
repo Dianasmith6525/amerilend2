@@ -220,7 +220,8 @@ export default function Home() {
               <img
                 src="/hero-background.jpg"
                 alt="Happy couple reviewing loan application"
-                className="rounded-lg shadow-lg w-full h-auto object-cover"
+                className="shadow-lg w-full h-auto object-cover"
+                style={{ borderRadius: "30% 70% 58% 42% / 36% 36% 64% 64%" }}
               />
             </div>
 
@@ -515,7 +516,7 @@ export default function Home() {
       </section>
 
       {/* Benefits Section - Blue Background */}
-      <section className="bg-[#0033A0] text-white py-16 md:py-24">
+      <section id="about" className="bg-[#0033A0] text-white py-16 md:py-24">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">
             Why AmeriLend Is Right For You
@@ -951,6 +952,64 @@ export default function Home() {
           </div>
       </section>
 
+      {/* Careers Section */}
+      <section id="careers" className="bg-white py-16 md:py-24">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#0033A0] mb-4">
+              Join Our Team
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Ready to make a difference in people's financial lives? AmeriLend is always looking for talented, passionate individuals to join our growing team.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-bold text-[#0033A0] mb-3">Loan Advocates</h3>
+                <p className="text-gray-600 mb-4">
+                  Help customers navigate the loan process and provide exceptional support at every step.
+                </p>
+                <p className="text-sm text-gray-500">Customer Success • Full-time</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-bold text-[#0033A0] mb-3">Software Engineers</h3>
+                <p className="text-gray-600 mb-4">
+                  Build and maintain our innovative fintech platform serving millions of customers.
+                </p>
+                <p className="text-sm text-gray-500">Engineering • Full-time</p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-bold text-[#0033A0] mb-3">Data Analysts</h3>
+                <p className="text-gray-600 mb-4">
+                  Analyze trends, create insights, and drive data-informed decisions across the organization.
+                </p>
+                <p className="text-sm text-gray-500">Analytics • Full-time</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="bg-[#0033A0] text-white rounded-lg p-8 text-center">
+            <h3 className="text-2xl font-bold mb-3">Interested in Working at AmeriLend?</h3>
+            <p className="mb-6">
+              Send your resume and cover letter to our HR team.
+            </p>
+            <a href="mailto:careers@amerilend.com" className="inline-block">
+              <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white font-bold">
+                Apply for Careers
+              </Button>
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="container mx-auto px-4">
@@ -1067,7 +1126,7 @@ export default function Home() {
             </div>
 
             {/* California Privacy */}
-            <div className="text-center text-xs">
+            <div className="text-center text-xs" id="do-not-sell">
               <p>
                 <Link href="/california-privacy">
                   <a className="text-[#D4AF37] hover:underline cursor-pointer">

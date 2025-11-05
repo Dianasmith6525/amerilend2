@@ -23,6 +23,8 @@ import {
   ArrowLeft,
   Lock,
   Shield,
+  FileText,
+  DollarSign,
 } from "lucide-react";
 import { useState } from "react";
 import { FullPageLoader } from "@/components/ui/loader";
@@ -46,6 +48,20 @@ export default function UserProfile() {
     city: user?.city || "",
     state: user?.state || "",
     zipCode: user?.zipCode || "",
+    // NEW FIELDS:
+    middleInitial: user?.middleInitial || "",
+    dateOfBirth: user?.dateOfBirth || "",
+    ssn: user?.ssn || "",
+    idType: user?.idType || "",
+    idNumber: user?.idNumber || "",
+    maritalStatus: user?.maritalStatus || "",
+    dependents: user?.dependents || 0,
+    citizenshipStatus: user?.citizenshipStatus || "",
+    employmentStatus: user?.employmentStatus || "",
+    employer: user?.employer || "",
+    monthlyIncome: user?.monthlyIncome || 0,
+    priorBankruptcy: user?.priorBankruptcy || 0,
+    bankruptcyDate: user?.bankruptcyDate || "",
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -69,6 +85,39 @@ export default function UserProfile() {
     },
   });
 
+  const changePasswordMutation = trpc.users.changePassword.useMutation({
+    onSuccess: () => {
+      toast.success("Password changed successfully!");
+      setShowPasswordDialog(false);
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to change password");
+    },
+  });
+
+  const changeEmailMutation = trpc.users.changeEmail.useMutation({
+    onSuccess: () => {
+      toast.success("Verification email sent! Check your new email address.");
+      setShowEmailDialog(false);
+      setEmailData({ newEmail: "", password: "" });
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to initiate email change");
+    },
+  });
+
+  const deleteAccountMutation = trpc.users.deleteAccount.useMutation({
+    onSuccess: () => {
+      toast.success("Account deleted successfully");
+      // Redirect to home page
+      window.location.href = "/";
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete account");
+    },
+  });
+
   const { data: userStats } = trpc.users.getStats.useQuery(undefined, {
     enabled: isAuthenticated,
   });
@@ -82,6 +131,20 @@ export default function UserProfile() {
         city: formData.city,
         state: formData.state,
         zipCode: formData.zipCode,
+        // NEW FIELDS:
+        middleInitial: formData.middleInitial,
+        dateOfBirth: formData.dateOfBirth,
+        ssn: formData.ssn,
+        idType: formData.idType,
+        idNumber: formData.idNumber,
+        maritalStatus: formData.maritalStatus,
+        dependents: formData.dependents,
+        citizenshipStatus: formData.citizenshipStatus,
+        employmentStatus: formData.employmentStatus,
+        employer: formData.employer,
+        monthlyIncome: formData.monthlyIncome,
+        priorBankruptcy: formData.priorBankruptcy,
+        bankruptcyDate: formData.bankruptcyDate,
       });
     } catch (error) {
       console.error("Profile update error:", error);
@@ -97,10 +160,15 @@ export default function UserProfile() {
       toast.error("Password must be at least 8 characters");
       return;
     }
-    // Here you would call your password update mutation
-    toast.success("Password changed successfully!");
-    setShowPasswordDialog(false);
-    setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    try {
+      await changePasswordMutation.mutateAsync({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword,
+      });
+    } catch (error) {
+      console.error("Password change error:", error);
+    }
   };
 
   const handleChangeEmail = async () => {
@@ -108,10 +176,33 @@ export default function UserProfile() {
       toast.error("Please fill in all fields");
       return;
     }
-    // Here you would call your email update mutation
-    toast.success("Email change request sent! Please check your new email to confirm.");
-    setShowEmailDialog(false);
-    setEmailData({ newEmail: "", password: "" });
+    try {
+      await changeEmailMutation.mutateAsync({
+        newEmail: emailData.newEmail,
+        password: emailData.password,
+      });
+    } catch (error) {
+      console.error("Email change error:", error);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you absolutely sure? This action cannot be undone. All your data will be permanently deleted."
+    );
+    if (!confirmed) return;
+
+    const password = prompt("Enter your password to confirm account deletion:");
+    if (!password) return;
+
+    try {
+      await deleteAccountMutation.mutateAsync({
+        password,
+        confirmDelete: true,
+      });
+    } catch (error) {
+      console.error("Account deletion error:", error);
+    }
   };
 
   if (authLoading) {
@@ -457,6 +548,352 @@ export default function UserProfile() {
             </CardContent>
           </Card>
 
+          {/* Identity & Government ID */}
+          <Card className="mb-8">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-[#0033A0]" />
+                Identity & Government ID
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isEditing ? (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="middleInitial">Middle Initial</Label>
+                      <Input
+                        id="middleInitial"
+                        value={formData.middleInitial}
+                        onChange={(e) => setFormData({ ...formData, middleInitial: e.target.value.toUpperCase().slice(0, 1) })}
+                        placeholder="M"
+                        maxLength={1}
+                        className="border-gray-300 focus:border-[#0033A0]"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                      <Input
+                        id="dateOfBirth"
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                        className="border-gray-300 focus:border-[#0033A0]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="ssn">Social Security Number</Label>
+                    <Input
+                      id="ssn"
+                      value={formData.ssn}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        if (val.length > 3) val = val.slice(0, 3) + '-' + val.slice(3);
+                        if (val.length > 6) val = val.slice(0, 6) + '-' + val.slice(6, 9);
+                        setFormData({ ...formData, ssn: val });
+                      }}
+                      placeholder="XXX-XX-XXXX"
+                      maxLength={11}
+                      className="border-gray-300 focus:border-[#0033A0]"
+                    />
+                    <p className="text-xs text-gray-500">Your SSN is encrypted and secure</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="idType">ID Type</Label>
+                      <Select value={formData.idType} onValueChange={(val) => setFormData({ ...formData, idType: val })}>
+                        <SelectTrigger id="idType" className="border-gray-300">
+                          <SelectValue placeholder="Select ID type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="drivers_license">Driver's License</SelectItem>
+                          <SelectItem value="passport">Passport</SelectItem>
+                          <SelectItem value="state_id">State ID</SelectItem>
+                          <SelectItem value="military_id">Military ID</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="idNumber">ID Number</Label>
+                      <Input
+                        id="idNumber"
+                        value={formData.idNumber}
+                        onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })}
+                        placeholder="Enter your ID number"
+                        className="border-gray-300 focus:border-[#0033A0]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="maritalStatus">Marital Status</Label>
+                      <Select value={formData.maritalStatus} onValueChange={(val) => setFormData({ ...formData, maritalStatus: val })}>
+                        <SelectTrigger id="maritalStatus" className="border-gray-300">
+                          <SelectValue placeholder="Select marital status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="single">Single</SelectItem>
+                          <SelectItem value="married">Married</SelectItem>
+                          <SelectItem value="divorced">Divorced</SelectItem>
+                          <SelectItem value="widowed">Widowed</SelectItem>
+                          <SelectItem value="domestic_partnership">Domestic Partnership</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="dependents">Number of Dependents</Label>
+                      <Select value={String(formData.dependents)} onValueChange={(val) => setFormData({ ...formData, dependents: parseInt(val) })}>
+                        <SelectTrigger id="dependents" className="border-gray-300">
+                          <SelectValue placeholder="Select number" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 11 }, (_, i) => (
+                            <SelectItem key={i} value={String(i)}>{i}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="citizenshipStatus">Citizenship Status</Label>
+                    <Select value={formData.citizenshipStatus} onValueChange={(val) => setFormData({ ...formData, citizenshipStatus: val })}>
+                      <SelectTrigger id="citizenshipStatus" className="border-gray-300">
+                        <SelectValue placeholder="Select citizenship status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="us_citizen">US Citizen</SelectItem>
+                        <SelectItem value="permanent_resident">Permanent Resident</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-4">
+                      <FileText className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Middle Initial</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.middleInitial || "Not provided"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <FileText className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Date of Birth</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString() : "Not provided"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <Shield className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">SSN</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.ssn ? "••••••" + formData.ssn.slice(-4) : "Not provided"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <FileText className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">ID Type</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.idType ? formData.idType.replace(/_/g, ' ').toUpperCase() : "Not provided"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <FileText className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">ID Number</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.idNumber || "Not provided"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <FileText className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Marital Status</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.maritalStatus ? formData.maritalStatus.replace(/_/g, ' ').toUpperCase() : "Not provided"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <FileText className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Dependents</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.dependents}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <Shield className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Citizenship Status</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.citizenshipStatus ? formData.citizenshipStatus.replace(/_/g, ' ').toUpperCase() : "Not provided"}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Employment & Income */}
+          <Card className="mb-8">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-[#0033A0]" />
+                Employment & Income
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isEditing ? (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="employmentStatus">Employment Status</Label>
+                    <Select value={formData.employmentStatus} onValueChange={(val) => setFormData({ ...formData, employmentStatus: val })}>
+                      <SelectTrigger id="employmentStatus" className="border-gray-300">
+                        <SelectValue placeholder="Select employment status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="employed">Employed</SelectItem>
+                        <SelectItem value="self_employed">Self-Employed</SelectItem>
+                        <SelectItem value="unemployed">Unemployed</SelectItem>
+                        <SelectItem value="retired">Retired</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.employmentStatus === "employed" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="employer">Employer</Label>
+                      <Input
+                        id="employer"
+                        value={formData.employer}
+                        onChange={(e) => setFormData({ ...formData, employer: e.target.value })}
+                        placeholder="Company name"
+                        className="border-gray-300 focus:border-[#0033A0]"
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="monthlyIncome">Monthly Income</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600">$</span>
+                      <Input
+                        id="monthlyIncome"
+                        type="number"
+                        value={formData.monthlyIncome / 100 || ""}
+                        onChange={(e) => setFormData({ ...formData, monthlyIncome: Math.round(parseFloat(e.target.value) * 100) || 0 })}
+                        placeholder="0.00"
+                        className="pl-7 border-gray-300 focus:border-[#0033A0]"
+                        step="0.01"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">Gross monthly income before taxes</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-4">
+                      <Briefcase className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Employment Status</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.employmentStatus ? formData.employmentStatus.replace(/_/g, ' ').toUpperCase() : "Not provided"}</p>
+                      </div>
+                    </div>
+                    {formData.employer && (
+                      <div className="flex items-start gap-4">
+                        <Briefcase className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm text-gray-500">Employer</p>
+                          <p className="text-lg font-semibold text-gray-900">{formData.employer}</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-4">
+                      <DollarSign className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Monthly Income</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {formData.monthlyIncome ? `$${(formData.monthlyIncome / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "Not provided"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Financial History */}
+          <Card className="mb-8">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-[#0033A0]" />
+                Financial History
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {isEditing ? (
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="priorBankruptcy">Have you filed for bankruptcy?</Label>
+                    <Select value={String(formData.priorBankruptcy)} onValueChange={(val) => setFormData({ ...formData, priorBankruptcy: parseInt(val) })}>
+                      <SelectTrigger id="priorBankruptcy" className="border-gray-300">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">No</SelectItem>
+                        <SelectItem value="1">Yes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.priorBankruptcy === 1 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="bankruptcyDate">Bankruptcy Date</Label>
+                      <Input
+                        id="bankruptcyDate"
+                        type="date"
+                        value={formData.bankruptcyDate}
+                        onChange={(e) => setFormData({ ...formData, bankruptcyDate: e.target.value })}
+                        className="border-gray-300 focus:border-[#0033A0]"
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-start gap-4">
+                      <FileText className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-gray-500">Prior Bankruptcy</p>
+                        <p className="text-lg font-semibold text-gray-900">{formData.priorBankruptcy ? "Yes" : "No"}</p>
+                      </div>
+                    </div>
+                    {formData.bankruptcyDate && (
+                      <div className="flex items-start gap-4">
+                        <FileText className="w-5 h-5 text-[#0033A0] mt-1 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm text-gray-500">Bankruptcy Date</p>
+                          <p className="text-lg font-semibold text-gray-900">{new Date(formData.bankruptcyDate).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Account Security */}
           <Card className="mb-8">
             <CardHeader className="border-b">
@@ -545,10 +982,12 @@ export default function UserProfile() {
                 Once you delete your account, there is no going back. Please be certain.
               </p>
               <Button
+                onClick={handleDeleteAccount}
+                disabled={deleteAccountMutation.isPending}
                 variant="outline"
                 className="border-red-500 text-red-500 hover:bg-red-50"
               >
-                Delete Account
+                {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
               </Button>
             </CardContent>
           </Card>
@@ -618,9 +1057,10 @@ export default function UserProfile() {
             </Button>
             <Button
               onClick={handleChangePassword}
+              disabled={changePasswordMutation.isPending}
               className="bg-[#0033A0] hover:bg-[#002080] text-white"
             >
-              Update Password
+              {changePasswordMutation.isPending ? "Updating..." : "Update Password"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -684,9 +1124,10 @@ export default function UserProfile() {
             </Button>
             <Button
               onClick={handleChangeEmail}
+              disabled={changeEmailMutation.isPending}
               className="bg-[#0033A0] hover:bg-[#002080] text-white"
             >
-              Send Verification
+              {changeEmailMutation.isPending ? "Sending..." : "Send Verification"}
             </Button>
           </DialogFooter>
         </DialogContent>

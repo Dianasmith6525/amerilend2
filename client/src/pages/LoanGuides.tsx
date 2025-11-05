@@ -5,64 +5,52 @@ import { ChevronLeft } from "lucide-react";
 export default function LoanGuides() {
   const guides = [
     {
+      id: "personal-loan",
       title: "Personal Loan Complete Guide",
       description: "Learn everything about personal loans, from how to apply to managing your loan responsibly.",
       topics: ["What is a personal loan?", "Loan amounts and terms", "Application process", "Repayment options", "Best uses for personal loans"]
     },
     {
+      id: "auto-loans",
       title: "Auto Loans Guide",
       description: "Complete guide to financing your vehicle purchase with favorable terms.",
       topics: ["New vs used vehicle loans", "How auto loan rates are calculated", "Down payment requirements", "Trade-in process", "Loan terms and repayment"]
     },
     {
+      id: "home-equity",
       title: "Home Equity Loans & HELOC Guide",
       description: "Understand how to leverage your home equity for financing large projects or consolidation.",
       topics: ["Home equity calculation", "HELOC vs home equity loan", "Interest rates and terms", "Tax deductions", "Drawing and repayment process"]
     },
     {
+      id: "debt-consolidation",
       title: "Debt Consolidation Guide",
       description: "Simplify your finances by combining multiple debts into a single payment.",
       topics: ["How debt consolidation works", "Benefits of consolidation", "Calculating savings", "Credit score impact", "Long-term strategies"]
     },
     {
-      title: "Rates & Terms Guide",
-      description: "Understand how we determine rates and the flexible terms available to you.",
-      topics: ["How we calculate rates", "Term options", "APR comparison", "Early repayment benefits", "Fee structure"]
+      id: "credit-score",
+      title: "How to Improve Your Credit Score",
+      description: "Proven strategies to build and maintain a strong credit score.",
+      topics: ["Understanding credit scores", "Payment history importance", "Credit utilization tips", "Building credit history", "Dispute credit errors"]
     },
     {
-      title: "Loan Approval Guide",
-      description: "Discover what factors we consider and how to improve your chances of approval.",
-      topics: ["Approval factors", "Credit score impact", "Income verification", "What disqualifies you", "Document requirements"]
+      id: "emergency-funds",
+      title: "Building Your Emergency Fund",
+      description: "Create financial security with an emergency fund strategy that works.",
+      topics: ["Why you need emergency savings", "How much to save", "Best places to keep funds", "Building your fund", "Using it wisely"]
     },
     {
-      title: "Getting Your Funds",
-      description: "Everything you need to know about funding, from approval to receiving your money.",
-      topics: ["Timeline", "Direct deposit", "Bank requirements", "Fastest funding options", "Payment processing"]
-    },
-    {
-      title: "Repayment Guide",
-      description: "Master the art of repaying your loan on time and building your credit.",
-      topics: ["Payment schedule", "Payment methods", "Early payoff strategy", "Credit building", "Handling missed payments"]
-    },
-    {
-      title: "Short-Term Loans Explained",
-      description: "Quick loans for immediate cash needs and emergency situations.",
-      topics: ["Quick approval process", "Same-day funding", "Short repayment terms", "Fees and charges", "Responsible borrowing"]
-    },
-    {
+      id: "business-loans",
       title: "Business Loans Guide",
       description: "Financing options for business startup, expansion, and working capital.",
-      topics: ["Business loan types", "Documentation required", "Business plan preparation", "Collateral options", "Using funds wisely"]
+      topics: ["Types of business loans", "Documentation required", "Business plan preparation", "Collateral options", "Using funds wisely"]
     },
     {
-      title: "Student Loans Guide",
-      description: "Comprehensive guide to financing your education.",
-      topics: ["Federal vs private loans", "FAFSA process", "Repayment plans", "Loan forgiveness programs", "Managing student debt"]
-    },
-    {
-      title: "Credit Builder Loans",
-      description: "Build or rebuild your credit with specialized credit builder loans.",
-      topics: ["How credit builder loans work", "Building credit from scratch", "Monitoring progress", "Graduation to regular loans", "Best practices"]
+      id: "quick-approval",
+      title: "Fast Loan Approval: Same Day Funding",
+      description: "Get quick access to cash with same-day or next-day funding options.",
+      topics: ["What makes a loan quick", "Approval timeline", "Requirements for approval", "Tips for speed", "Same-day funding"]
     }
   ];
 
@@ -110,9 +98,11 @@ export default function LoanGuides() {
                     ))}
                   </ul>
                 </div>
-                <a href="#read-guide" className="text-[#0033A0] hover:text-[#FF8C00] font-semibold inline-block">
-                  Read Guide →
-                </a>
+                <Link href={`/loan-guides/${guide.id}`}>
+                  <a className="text-[#0033A0] hover:text-[#FF8C00] font-semibold inline-block">
+                    Read Guide →
+                  </a>
+                </Link>
               </div>
             ))}
           </div>

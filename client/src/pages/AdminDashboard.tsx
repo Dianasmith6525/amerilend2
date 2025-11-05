@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Settings, DollarSign, CheckCircle, XCircle, Send, ArrowLeft, PartyPopper, Eye, MapPin, Briefcase, User, Calendar, FileText, AlertCircle } from "lucide-react";
+import { Loader2, Settings, DollarSign, CheckCircle, XCircle, Send, ArrowLeft, PartyPopper, Eye, MapPin, Briefcase, User, Calendar, FileText, AlertCircle, TrendingUp, Activity } from "lucide-react";
 import { useState } from "react";
 import { FullPageLoader, Loader } from "@/components/ui/loader";
 import { Link, useLocation } from "wouter";
@@ -340,6 +340,24 @@ export default function AdminDashboard() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
+                        {/* Fraud Score Badge */}
+                        {app.fraudScore !== undefined && (
+                          <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200">
+                            <AlertCircle className="h-5 w-5 text-purple-600" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-purple-900">Fraud Risk Score</p>
+                              <p className="text-2xl font-bold text-purple-700">{app.fraudScore}/100</p>
+                            </div>
+                            <Badge className={
+                              app.fraudScore >= 80 ? "bg-red-100 text-red-800 border-red-300" :
+                              app.fraudScore >= 50 ? "bg-yellow-100 text-yellow-800 border-yellow-300" :
+                              "bg-green-100 text-green-800 border-green-300"
+                            }>
+                              {app.fraudScore >= 80 ? "⛔ BLOCKED" : app.fraudScore >= 50 ? "⚠️ REVIEW" : "✅ SAFE"}
+                            </Badge>
+                          </div>
+                        )}
+
                         <div className="grid md:grid-cols-4 gap-4">
                           <div>
                             <p className="text-sm text-muted-foreground">Requested</p>
@@ -928,38 +946,99 @@ export default function AdminDashboard() {
       <Dialog open={customerDetailsDialog.open} onOpenChange={(open) => {
         if (!open) setCustomerDetailsDialog({ open: false, application: null });
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Customer Full Information</DialogTitle>
+            <DialogTitle>Customer Full Information & Loan Decision</DialogTitle>
             <DialogDescription>
-              Complete application and customer details
+              Complete application details with fraud analysis for approval/decline decision
             </DialogDescription>
           </DialogHeader>
 
           {customerDetailsDialog.application && (
             <div className="space-y-6">
-              {/* Personal Information */}
-              <div className="space-y-4">
-                <div className="border-b pb-3">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Personal Information
-                  </h3>
+              {/* DECISION SUMMARY - At the top for quick assessment */}
+              <div className="grid md:grid-cols-3 gap-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border-2 border-blue-300">
+                {/* Fraud Score Card */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-slate-600">Fraud Risk Assessment</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-3xl font-bold">
+                      {customerDetailsDialog.application.fraudScore ?? 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground">/100</p>
+                  </div>
+                  <Badge className={
+                    (customerDetailsDialog.application.fraudScore ?? 0) >= 80 ? "bg-red-100 text-red-800 border-red-300 w-full justify-center" :
+                    (customerDetailsDialog.application.fraudScore ?? 0) >= 50 ? "bg-yellow-100 text-yellow-800 border-yellow-300 w-full justify-center" :
+                    "bg-green-100 text-green-800 border-green-300 w-full justify-center"
+                  }>
+                    {(customerDetailsDialog.application.fraudScore ?? 0) >= 80 ? "🚨 HIGH RISK" : 
+                     (customerDetailsDialog.application.fraudScore ?? 0) >= 50 ? "⚠️ MEDIUM RISK" : 
+                     "✅ LOW RISK"}
+                  </Badge>
+                  {customerDetailsDialog.application.fraudScore !== undefined && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {customerDetailsDialog.application.fraudScore >= 80 ? "Auto-rejected" : 
+                       customerDetailsDialog.application.fraudScore >= 50 ? "Requires manual review" : 
+                       "Eligible for approval"}
+                    </p>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Full Name</p>
-                    <p className="font-semibold">{customerDetailsDialog.application.fullName}</p>
+
+                {/* Debt-to-Income Ratio */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-slate-600">Debt-to-Income Analysis</p>
+                  {customerDetailsDialog.application.monthlyIncome && customerDetailsDialog.application.requestedAmount ? (
+                    <>
+                      <p className="text-2xl font-bold text-blue-700">
+                        {Math.round((customerDetailsDialog.application.requestedAmount / 100) / (customerDetailsDialog.application.monthlyIncome / 100) * 100)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {((customerDetailsDialog.application.requestedAmount / 100) / (customerDetailsDialog.application.monthlyIncome / 100) * 100) <= 50 
+                          ? "✅ Acceptable" 
+                          : "⚠️ High ratio"}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">N/A</p>
+                  )}
+                </div>
+
+                {/* Employment & Financial Status */}
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-slate-600">Financial Health</p>
+                  <Badge variant="outline" className="w-full justify-center mb-2">
+                    {customerDetailsDialog.application.employmentStatus?.replace(/_/g, ' ') || "Unknown"}
+                  </Badge>
+                  <div className="text-xs space-y-1">
+                    {customerDetailsDialog.application.priorBankruptcy ? (
+                      <p className="text-red-600 font-medium">⚠️ Prior bankruptcy</p>
+                    ) : (
+                      <p className="text-green-600">✅ No bankruptcy</p>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Middle Initial</p>
-                    <p className="font-semibold">{customerDetailsDialog.application.middleInitial || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Email</p>
-                    <p className="font-semibold break-all">{customerDetailsDialog.application.email}</p>
-                  </div>
-                  <div>
+                </div>
+              </div>
+
+              {/* Fraud Flags */}
+              {customerDetailsDialog.application.fraudFlags && 
+               typeof customerDetailsDialog.application.fraudFlags === 'object' && 
+               Object.keys(customerDetailsDialog.application.fraudFlags).length > 0 && (
+                <div className="space-y-3 p-3 bg-red-50 border border-red-300 rounded-lg">
+                  <h4 className="font-semibold text-red-900 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Fraud Flags Detected
+                  </h4>
+                  <ul className="text-sm text-red-800 space-y-1">
+                    {Object.entries(customerDetailsDialog.application.fraudFlags).map(([key, value]: any) => (
+                      <li key={key} className="flex items-start gap-2">
+                        <span className="text-red-600 mt-1">•</span>
+                        <span>{typeof value === 'string' ? value : key}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
                     <p className="text-muted-foreground">Phone</p>
                     <p className="font-semibold">{customerDetailsDialog.application.phone}</p>
                   </div>

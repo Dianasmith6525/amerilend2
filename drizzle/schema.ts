@@ -18,12 +18,32 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  // User profile fields
+  // User profile fields - Basic info
   phone: varchar("phone", { length: 20 }),
   street: varchar("street", { length: 255 }),
   city: varchar("city", { length: 100 }),
   state: varchar("state", { length: 2 }),
   zipCode: varchar("zipCode", { length: 10 }),
+  
+  // User profile fields - Identity & Demographics
+  middleInitial: varchar("middleInitial", { length: 1 }),
+  dateOfBirth: varchar("dateOfBirth", { length: 10 }), // YYYY-MM-DD
+  ssn: varchar("ssn", { length: 11 }), // XXX-XX-XXXX
+  idType: varchar("idType", { length: 50 }), // drivers_license, passport, state_id, military_id
+  idNumber: varchar("idNumber", { length: 100 }),
+  maritalStatus: varchar("maritalStatus", { length: 50 }), // single, married, divorced, widowed, domestic_partnership
+  dependents: int("dependents").default(0),
+  citizenshipStatus: varchar("citizenshipStatus", { length: 50 }), // us_citizen, permanent_resident
+  
+  // User profile fields - Employment & Financial
+  employmentStatus: varchar("employmentStatus", { length: 50 }), // employed, self_employed, unemployed, retired
+  employer: varchar("employer", { length: 255 }),
+  monthlyIncome: int("monthlyIncome"), // in cents
+  
+  // User profile fields - Bankruptcy Information
+  priorBankruptcy: int("priorBankruptcy").default(0), // 0 = no, 1 = yes
+  bankruptcyDate: varchar("bankruptcyDate", { length: 10 }), // YYYY-MM-DD, optional
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

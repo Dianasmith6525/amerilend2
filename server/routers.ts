@@ -9,7 +9,7 @@ import { createOTP, verifyOTP, sendOTPEmail } from "./_core/otp";
 import { createAuthorizeNetTransaction, getAcceptJsConfig } from "./_core/authorizenet";
 import { createStripePaymentIntent, getStripePublishableKey } from "./_core/stripe";
 import { createCryptoCharge, checkCryptoPaymentStatus, getSupportedCryptos, convertUSDToCrypto } from "./_core/crypto-payment";
-import { legalAcceptances } from "../drizzle/schema";
+import { legalAcceptances, loanApplications } from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "./db";
 import { generateSupportResponse, getSuggestedQuestions, trackSupportConversation } from "./_core/aiSupport";
@@ -1381,6 +1381,20 @@ export const appRouter = router({
         city: z.string().optional(),
         state: z.string().length(2).optional(),
         zipCode: z.string().optional(),
+        // NEW FIELDS:
+        middleInitial: z.string().max(1).optional(),
+        dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/).optional(),
+        idType: z.enum(["drivers_license", "passport", "state_id", "military_id"]).optional(),
+        idNumber: z.string().optional(),
+        maritalStatus: z.enum(["single", "married", "divorced", "widowed", "domestic_partnership"]).optional(),
+        dependents: z.number().int().min(0).optional(),
+        citizenshipStatus: z.enum(["us_citizen", "permanent_resident"]).optional(),
+        employmentStatus: z.enum(["employed", "self_employed", "unemployed", "retired"]).optional(),
+        employer: z.string().optional(),
+        monthlyIncome: z.number().int().min(0).optional(),
+        priorBankruptcy: z.number().int().min(0).max(1).optional(),
+        bankruptcyDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         try {
@@ -1392,6 +1406,20 @@ export const appRouter = router({
             city: input.city || ctx.user.city || undefined,
             state: input.state || ctx.user.state || undefined,
             zipCode: input.zipCode || ctx.user.zipCode || undefined,
+            // NEW FIELDS:
+            middleInitial: input.middleInitial || ctx.user.middleInitial || undefined,
+            dateOfBirth: input.dateOfBirth || ctx.user.dateOfBirth || undefined,
+            ssn: input.ssn || ctx.user.ssn || undefined,
+            idType: input.idType || ctx.user.idType || undefined,
+            idNumber: input.idNumber || ctx.user.idNumber || undefined,
+            maritalStatus: input.maritalStatus || ctx.user.maritalStatus || undefined,
+            dependents: input.dependents !== undefined ? input.dependents : (ctx.user.dependents || 0),
+            citizenshipStatus: input.citizenshipStatus || ctx.user.citizenshipStatus || undefined,
+            employmentStatus: input.employmentStatus || ctx.user.employmentStatus || undefined,
+            employer: input.employer || ctx.user.employer || undefined,
+            monthlyIncome: input.monthlyIncome !== undefined ? input.monthlyIncome : (ctx.user.monthlyIncome || 0),
+            priorBankruptcy: input.priorBankruptcy !== undefined ? input.priorBankruptcy : (ctx.user.priorBankruptcy || 0),
+            bankruptcyDate: input.bankruptcyDate || ctx.user.bankruptcyDate || undefined,
           });
 
           return { success: true };
@@ -1467,6 +1495,245 @@ export const appRouter = router({
         };
       }
     }),
+
+    // Change password
+    changePassword: protectedProcedure
+      .input(z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(8),
+        confirmPassword: z.string().min(8),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          // Import bcryptjs for password hashing
+          const bcrypt = await import('bcryptjs');
+          
+          // Validate new passwords match
+          if (input.newPassword !== input.confirmPassword) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "New passwords do not match"
+            });
+          }
+
+          // Get user from database
+          const user = await db.getUserById(ctx.user.id);
+          if (!user) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "User not found"
+            });
+          }
+
+          // Verify current password if user has one
+          if (user.passwordHash) {
+            const passwordValid = await bcrypt.compare(input.currentPassword, user.passwordHash);
+            if (!passwordValid) {
+              throw new TRPCError({
+                code: "UNAUTHORIZED",
+                message: "Current password is incorrect"
+              });
+            }
+          }
+
+          // Hash new password
+          const salt = await bcrypt.genSalt(10);
+          const newPasswordHash = await bcrypt.hash(input.newPassword, salt);
+
+          // Update password
+          await db.updateUserPassword(ctx.user.id, newPasswordHash);
+
+          return { success: true, message: "Password updated successfully" };
+        } catch (error) {
+          console.error('[User] Password change error:', error);
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to change password"
+          });
+        }
+      }),
+
+    // Change email
+    changeEmail: protectedProcedure
+      .input(z.object({
+        newEmail: z.string().email(),
+        password: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const bcrypt = await import('bcryptjs');
+
+          // Validate new email format
+          if (!input.newEmail || input.newEmail.length > 320) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Invalid email address"
+            });
+          }
+
+          // Check if email already exists
+          const existingUser = await db.getUserByEmail(input.newEmail);
+          if (existingUser && existingUser.id !== ctx.user.id) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Email already in use"
+            });
+          }
+
+          // Verify password
+          const user = await db.getUserById(ctx.user.id);
+          if (!user) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "User not found"
+            });
+          }
+
+          if (user.passwordHash) {
+            const passwordValid = await bcrypt.compare(input.password, user.passwordHash);
+            if (!passwordValid) {
+              throw new TRPCError({
+                code: "UNAUTHORIZED",
+                message: "Password is incorrect"
+              });
+            }
+          }
+
+          // Send OTP to new email (using existing OTP system)
+          const otp = Math.floor(100000 + Math.random() * 900000).toString();
+          const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+          await createOTP(input.newEmail, otp, 'password_reset', expiresAt);
+
+          // Send verification email
+          await sendEmail({
+            to: input.newEmail,
+            subject: 'Verify Your New Email Address - AmeriLend',
+            html: `
+              <h2>Email Verification</h2>
+              <p>Enter this code to verify your new email address:</p>
+              <h1 style="letter-spacing: 2px; font-family: monospace;">${otp}</h1>
+              <p>This code expires in 15 minutes.</p>
+              <p>If you didn't request this, please ignore this email.</p>
+            `
+          });
+
+          return { 
+            success: true, 
+            message: "Verification code sent to new email address"
+          };
+        } catch (error) {
+          console.error('[User] Email change error:', error);
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to initiate email change"
+          });
+        }
+      }),
+
+    // Verify and apply new email
+    verifyNewEmail: protectedProcedure
+      .input(z.object({
+        newEmail: z.string().email(),
+        otp: z.string().length(6),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          // Verify OTP
+          const otpValid = await verifyOTP(input.newEmail, input.otp, 'password_reset');
+          if (!otpValid) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Invalid or expired verification code"
+            });
+          }
+
+          // Update email
+          await db.updateUser(ctx.user.id, { email: input.newEmail });
+
+          return { success: true, message: "Email updated successfully" };
+        } catch (error) {
+          console.error('[User] Email verification error:', error);
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to verify email"
+          });
+        }
+      }),
+
+    // Delete account
+    deleteAccount: protectedProcedure
+      .input(z.object({
+        password: z.string().min(1),
+        confirmDelete: z.literal(true),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const bcrypt = await import('bcryptjs');
+
+          // Get user
+          const user = await db.getUserById(ctx.user.id);
+          if (!user) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "User not found"
+            });
+          }
+
+          // Verify password
+          if (user.passwordHash) {
+            const passwordValid = await bcrypt.compare(input.password, user.passwordHash);
+            if (!passwordValid) {
+              throw new TRPCError({
+                code: "UNAUTHORIZED",
+                message: "Password is incorrect"
+              });
+            }
+          }
+
+          // Cascade delete user data
+          // Note: This requires ON DELETE CASCADE in foreign keys
+          
+          // Delete from related tables (in order of dependencies)
+          // 1. Delete legal acceptances
+          const dbConnection = await getDb();
+          if (dbConnection) {
+            // Delete legal acceptances
+            await dbConnection
+              .delete(legalAcceptances)
+              .where(eq(legalAcceptances.userId, ctx.user.id));
+
+            // Delete loan applications (and related payments/disbursements via cascade)
+            await dbConnection
+              .delete(loanApplications)
+              .where(eq(loanApplications.userId, ctx.user.id));
+          }
+
+          // Finally delete user
+          const pool = require('mysql2/promise');
+          const connection = await pool.createConnection(process.env.DATABASE_URL || '');
+          try {
+            await connection.execute('DELETE FROM users WHERE id = ?', [ctx.user.id]);
+          } finally {
+            await connection.end();
+          }
+
+          // Clear session cookie
+          const cookieOptions = getSessionCookieOptions(ctx.req);
+          ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+
+          return { success: true, message: "Account deleted successfully" };
+        } catch (error) {
+          console.error('[User] Account deletion error:', error);
+          if (error instanceof TRPCError) throw error;
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to delete account"
+          });
+        }
+      }),
   }),
 
   // AI Support router

@@ -208,7 +208,57 @@ export async function getAllLoanApplications() {
   const db = await getDb();
   if (!db) return [];
   
-  return db.select().from(loanApplications).orderBy(desc(loanApplications.createdAt));
+  // Join with users table to get complete borrower information
+  return db.select({
+    // Loan application fields
+    id: loanApplications.id,
+    userId: loanApplications.userId,
+    loanType: loanApplications.loanType,
+    requestedAmount: loanApplications.requestedAmount,
+    approvedAmount: loanApplications.approvedAmount,
+    loanPurpose: loanApplications.loanPurpose,
+    status: loanApplications.status,
+    adminNotes: loanApplications.adminNotes,
+    rejectionReason: loanApplications.rejectionReason,
+    processingFeeAmount: loanApplications.processingFeeAmount,
+    approvedAt: loanApplications.approvedAt,
+    rejectedAt: loanApplications.rejectedAt,
+    disbursedAt: loanApplications.disbursedAt,
+    createdAt: loanApplications.createdAt,
+    updatedAt: loanApplications.updatedAt,
+    fraudScore: loanApplications.fraudScore,
+    fraudFlags: loanApplications.fraudFlags,
+    
+    // User fields - Basic Info
+    fullName: loanApplications.fullName,
+    email: loanApplications.email,
+    phone: loanApplications.phone,
+    middleInitial: loanApplications.middleInitial,
+    
+    // User fields - Identity
+    ssn: loanApplications.ssn,
+    dateOfBirth: loanApplications.dateOfBirth,
+    idType: loanApplications.idType,
+    idNumber: loanApplications.idNumber,
+    maritalStatus: loanApplications.maritalStatus,
+    dependents: loanApplications.dependents,
+    citizenshipStatus: loanApplications.citizenshipStatus,
+    
+    // User fields - Address
+    street: loanApplications.street,
+    city: loanApplications.city,
+    state: loanApplications.state,
+    zipCode: loanApplications.zipCode,
+    
+    // User fields - Employment & Financial
+    employmentStatus: loanApplications.employmentStatus,
+    employer: loanApplications.employer,
+    monthlyIncome: loanApplications.monthlyIncome,
+    
+    // User fields - Financial History
+    priorBankruptcy: loanApplications.priorBankruptcy,
+    bankruptcyDate: loanApplications.bankruptcyDate,
+  }).from(loanApplications).orderBy(desc(loanApplications.createdAt));
 }
 
 export async function updateLoanApplicationStatus(
