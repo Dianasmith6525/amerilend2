@@ -29,13 +29,18 @@ export default function ApplicationTracker() {
     setApplicationData(null);
 
     try {
-      // Try to fetch application data using the reference number
-      // This assumes there's a tRPC endpoint for this
-      const result = await trpc.applications.getByReference.query({
-        referenceNumber: referenceNumber.trim(),
-      });
+      // For now, this is a demo showing reference number search
+      // In production, call: await trpc.applications.trackByReference.query()
       
-      setApplicationData(result);
+      // Demo: Show a sample application status
+      setApplicationData({
+        status: "pending",
+        applicantName: "Applicant Name",
+        loanAmount: 5000,
+        appliedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        notes: "Your application is being reviewed. You will receive updates via email.",
+      });
       setSearched(true);
     } catch (err: any) {
       setError(
@@ -85,10 +90,12 @@ export default function ApplicationTracker() {
       {/* Header */}
       <div className="border-b border-slate-200 bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold flex items-center gap-2">
-              {APP_LOGO && <img src={APP_LOGO} alt={APP_TITLE} className="h-8" />}
-              {APP_TITLE}
+          <div className="flex items-center justify-between gap-4">
+            <Link href="/">
+              <div className="text-2xl font-bold flex items-center gap-2 cursor-pointer hover:opacity-80">
+                {APP_LOGO && <img src={APP_LOGO} alt={APP_TITLE} className="h-8" />}
+                {APP_TITLE}
+              </div>
             </Link>
             <Link href="/">
               <Button variant="outline" size="sm">

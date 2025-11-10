@@ -1328,6 +1328,27 @@ Please login to the admin dashboard to review this application.
         };
       }),
 
+    // Public: Track application by reference number (no login required)
+    trackByReference: publicProcedure
+      .input(z.object({ referenceNumber: z.string() }))
+      .query(async ({ input }) => {
+        const application = await db.getLoanApplicationByReferenceNumber(input.referenceNumber);
+        if (!application) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Application not found" });
+        }
+        // Return only non-sensitive fields for public tracking
+        return {
+          id: application.id,
+          referenceNumber: application.referenceNumber,
+          status: application.status,
+          applicantName: application.applicantName || application.firstName + " " + application.lastName,
+          loanAmount: application.loanAmount,
+          appliedAt: application.createdAt,
+          updatedAt: application.updatedAt,
+          notes: application.notes,
+        };
+      }),
+
     // Test: Simple number serialization
     testNumbers: protectedProcedure.query(async () => {
       return {
