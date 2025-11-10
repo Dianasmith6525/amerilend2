@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { CookieConsent } from "./components/CookieConsent";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -31,6 +31,8 @@ function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/apply"} component={Dashboard} />
+      <Route path={"/check-status"} component={Dashboard} />
       <Route path={"/pre-qualify"} component={PreQualification} />
       <Route path={"/admin"} component={Dashboard} />
       <Route path={"/admin/*"} component={Dashboard} />
@@ -72,9 +74,11 @@ function App() {
         defaultTheme="light"
       >
         <TooltipProvider>
-          <Toaster />
-          <Router />
-          <CookieConsent />
+          <WouterRouter>
+            <Toaster />
+            <Router />
+            <CookieConsent />
+          </WouterRouter>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -109,36 +109,28 @@ export default function Home() {
             <div className="hidden md:flex items-center gap-3">
               {isAuthenticated ? (
                 <>
-                  <Link href="/apply">
-                    <a className="inline-block">
-                      <PrimaryButton icon={<ArrowRight />}>
-                        Apply Now
-                      </PrimaryButton>
-                    </a>
+                  <Link href="/apply" className="inline-block">
+                    <PrimaryButton icon={<ArrowRight />}>
+                      Apply Now
+                    </PrimaryButton>
                   </Link>
-                  <Link href="/dashboard">
-                    <a className="inline-block">
-                      <SecondaryButton>
-                        Dashboard
-                      </SecondaryButton>
-                    </a>
+                  <Link href="/dashboard" className="inline-block">
+                    <SecondaryButton>
+                      Dashboard
+                    </SecondaryButton>
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/apply">
-                    <a className="inline-block">
-                      <PrimaryButton icon={<ArrowRight />}>
-                        Apply Now
-                      </PrimaryButton>
-                    </a>
+                  <Link href="/apply" className="inline-block">
+                    <PrimaryButton icon={<ArrowRight />}>
+                      Apply Now
+                    </PrimaryButton>
                   </Link>
-                  <Link href="/login">
-                    <a className="inline-block">
-                      <SecondaryButton>
-                        Log In
-                      </SecondaryButton>
-                    </a>
+                  <Link href="/login" className="inline-block">
+                    <SecondaryButton>
+                      Log In
+                    </SecondaryButton>
                   </Link>
                 </>
               )}
@@ -158,41 +150,31 @@ export default function Home() {
           {mobileMenuOpen && (
             <div className="md:hidden py-4 border-t">
               <nav className="flex flex-col gap-4">
-                <Link href="/apply">
-                  <a className="text-gray-700 hover:text-[#0033A0]">Loans</a>
-                </Link>
-                <Link href="/check-status">
-                  <a className="text-gray-700 hover:text-[#0033A0]">Track Application</a>
-                </Link>
+                <Link href="/apply" className="text-gray-700 hover:text-[#0033A0]">Loans</Link>
+                <Link href="/check-status" className="text-gray-700 hover:text-[#0033A0]">Track Application</Link>
                 <a href="#about" className="text-gray-700 hover:text-[#0033A0]">
                   About Us
                 </a>
                 <a href="#faq" className="text-gray-700 hover:text-[#0033A0]">
                   Help
                 </a>
-                <Link href="/apply">
-                  <a className="inline-block w-full">
+                <Link href="/apply" className="inline-block w-full">
                     <PrimaryButton className="w-full" icon={<ArrowRight />}>
                       Apply Now
                     </PrimaryButton>
-                  </a>
-                </Link>
+                  </Link>
                 {isAuthenticated ? (
-                  <Link href="/dashboard">
-                    <a className="inline-block w-full">
+                  <Link href="/dashboard" className="inline-block w-full">
                       <SecondaryButton className="w-full">
                         Dashboard
                       </SecondaryButton>
-                    </a>
-                  </Link>
+                    </Link>
                 ) : (
-                  <Link href="/login">
-                    <a className="inline-block w-full">
+                  <Link href="/login" className="inline-block w-full">
                       <SecondaryButton className="w-full">
                         Log In
                       </SecondaryButton>
-                    </a>
-                  </Link>
+                    </Link>
                 )}
               </nav>
             </div>
@@ -246,27 +228,21 @@ export default function Home() {
               </ul>
 
               <div className="flex flex-col gap-4 sm:gap-5 mb-6 sm:mb-8">
-                <Link href="/apply">
-                  <a className="inline-block w-full">
+                <Link href="/apply" className="inline-block w-full">
                     <PrimaryButton className="btn-lg w-full text-base sm:text-lg py-3 sm:py-4" icon={<ArrowRight />}>
                       Apply Now
                     </PrimaryButton>
-                  </a>
-                </Link>
-                <Link href="/pre-qualify">
-                  <a className="inline-block w-full">
+                  </Link>
+                <Link href="/pre-qualify" className="inline-block w-full">
                     <SecondaryButton className="btn-lg w-full text-base sm:text-lg py-3 sm:py-4">
                       Check If You Pre-Qualify
                     </SecondaryButton>
-                  </a>
-                </Link>
-                <Link href="/check-status">
-                  <a className="inline-block w-full">
+                  </Link>
+                <Link href="/check-status" className="inline-block w-full">
                     <SecondaryButton className="btn-lg w-full text-base sm:text-lg py-3 sm:py-4">
                       Track Your Application
                     </SecondaryButton>
-                  </a>
-                </Link>
+                  </Link>
               </div>
 
               <p className="text-sm sm:text-base text-gray-500 mt-4 sm:mt-6 leading-relaxed">
@@ -331,13 +307,11 @@ export default function Home() {
                 </div>
               </div>
 
-              <Link href="/apply">
-                <a className="inline-block mt-6 sm:mt-8">
+              <Link href="/apply" className="inline-block mt-6 sm:mt-8">
                   <PrimaryButton className="btn-lg" icon={<ArrowRight />}>
                     Apply Now
                   </PrimaryButton>
-                </a>
-              </Link>
+                </Link>
 
               <p className="text-xs sm:text-sm text-white/80 mt-3 sm:mt-4">
                 Applying does NOT affect your FICO® credit score.<sup>2</sup>
@@ -993,13 +967,11 @@ export default function Home() {
                 <p className="text-gray-600 mb-3 sm:mb-4 text-xs sm:text-sm md:text-base">
                   Ready to get started? Apply now and get an instant decision!
                 </p>
-                <Link href="/apply">
-                  <a className="inline-block">
+                <Link href="/apply" className="inline-block">
                     <PrimaryButton className="btn-lg text-xs sm:text-sm md:text-base" icon={<ArrowRight />}>
                       Apply Now - All States Welcome
                     </PrimaryButton>
-                  </a>
-                </Link>
+                  </Link>
               </div>
             </div>
         </div>
@@ -1040,13 +1012,11 @@ export default function Home() {
                   </div>
                 </div>
                 
-                <Link href="/check-status">
-                  <a className="inline-block w-full sm:w-auto">
+                <Link href="/check-status" className="inline-block w-full sm:w-auto">
                     <PrimaryButton className="btn-lg w-full sm:w-auto bg-white text-blue-600 hover:bg-blue-50" icon={<ArrowRight />}>
                       Check Application Status
                     </PrimaryButton>
-                  </a>
-                </Link>
+                  </Link>
               </div>
             </div>
           </div>
@@ -1120,9 +1090,7 @@ export default function Home() {
               <h4 className="font-bold text-lg mb-4">Company</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>
-                  <Link href="/about-us">
-                    <a className="hover:text-white transition-colors">About Us</a>
-                  </Link>
+                  <Link href="/about-us" className="hover:text-white transition-colors">About Us</Link>
                 </li>
                 <li>
                   <a href="tel:945-212-1609" className="hover:text-white transition-colors">
@@ -1142,19 +1110,13 @@ export default function Home() {
               <h4 className="font-bold text-lg mb-4">Loans</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>
-                  <Link href="/apply">
-                    <a className="hover:text-white transition-colors">Personal Loans</a>
-                  </Link>
+                  <Link href="/apply" className="hover:text-white transition-colors">Personal Loans</Link>
                 </li>
                 <li>
-                  <Link href="/apply">
-                    <a className="hover:text-white transition-colors">Installment Loans</a>
-                  </Link>
+                  <Link href="/apply" className="hover:text-white transition-colors">Installment Loans</Link>
                 </li>
                 <li>
-                  <Link href="/terms-of-use">
-                    <a className="hover:text-white transition-colors">Rates and Terms</a>
-                  </Link>
+                  <Link href="/terms-of-use" className="hover:text-white transition-colors">Rates and Terms</Link>
                 </li>
               </ul>
             </div>
@@ -1164,19 +1126,13 @@ export default function Home() {
               <h4 className="font-bold text-lg mb-4">Resources</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>
-                  <Link href="/faq">
-                    <a className="hover:text-white transition-colors">FAQs</a>
-                  </Link>
+                  <Link href="/faq" className="hover:text-white transition-colors">FAQs</Link>
                 </li>
                 <li>
-                  <Link href="/blog">
-                    <a className="hover:text-white transition-colors">Financial Blog</a>
-                  </Link>
+                  <Link href="/blog" className="hover:text-white transition-colors">Financial Blog</Link>
                 </li>
                 <li>
-                  <Link href="/loan-guides">
-                    <a className="hover:text-white transition-colors">Loan Guides</a>
-                  </Link>
+                  <Link href="/loan-guides" className="hover:text-white transition-colors">Loan Guides</Link>
                 </li>
               </ul>
             </div>
@@ -1194,19 +1150,13 @@ export default function Home() {
               <h4 className="font-bold text-lg mb-4">Legal</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>
-                  <Link href="/terms-of-use">
-                    <a className="hover:text-white transition-colors">Terms of Service</a>
-                  </Link>
+                  <Link href="/terms-of-use" className="hover:text-white transition-colors">Terms of Service</Link>
                 </li>
                 <li>
-                  <Link href="/privacy-policy">
-                    <a className="hover:text-white transition-colors">Privacy Policy</a>
-                  </Link>
+                  <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
                 </li>
                 <li>
-                  <Link href="/california-privacy">
-                    <a className="hover:text-white transition-colors">California Privacy</a>
-                  </Link>
+                  <Link href="/california-privacy" className="hover:text-white transition-colors">California Privacy</Link>
                 </li>
               </ul>
             </div>
@@ -1220,28 +1170,22 @@ export default function Home() {
               </p>
               <p className="text-xs">
                 Use of AmeriLend, LLC is subject to our{" "}
-                <Link href="/terms-of-use">
-                  <a className="text-[#D4AF37] hover:underline cursor-pointer">
+                <Link href="/terms-of-use" className="text-[#D4AF37] hover:underline cursor-pointer">
                     Terms of Use
-                  </a>
-                </Link>
+                  </Link>
                 {" "}and{" "}
-                <Link href="/privacy-policy">
-                  <a className="text-[#D4AF37] hover:underline cursor-pointer">
+                <Link href="/privacy-policy" className="text-[#D4AF37] hover:underline cursor-pointer">
                     Privacy Policy
-                  </a>
-                </Link>
+                  </Link>
               </p>
             </div>
 
             {/* California Privacy */}
             <div className="text-center text-xs" id="do-not-sell">
               <p>
-                <Link href="/california-privacy">
-                  <a className="text-[#D4AF37] hover:underline cursor-pointer">
+                <Link href="/california-privacy" className="text-[#D4AF37] hover:underline cursor-pointer">
                     California Disclosures and Privacy Policy
-                  </a>
-                </Link>
+                  </Link>
                 {" "}| California Consumers can opt-out of the sale of personal information by clicking{" "}
                 <a href="#do-not-sell" className="text-[#D4AF37] hover:underline font-semibold cursor-pointer">
                   Do Not Sell My Personal Information
@@ -1323,3 +1267,4 @@ export default function Home() {
     </div>
   );
 }
+
