@@ -1,3 +1,10 @@
+import "dotenv/config";
+import mysql from "mysql2/promise";
+import jwt from "jsonwebtoken";
+import { drizzle } from "drizzle-orm/mysql2";
+import { users } from "./drizzle/schema.js";
+import { eq } from "drizzle-orm";
+
 /**
  * Admin User Setup Script
  * 
@@ -9,34 +16,54 @@
  * Note: You need DATABASE_URL in your .env file
  */
 
-import { drizzle } from "drizzle-orm/mysql2";
-import { users } from "./drizzle/schema.js";
-import { eq } from "drizzle-orm";
-import dotenv from "dotenv";
-
-// Load environment variables
-dotenv.config();
-dotenv.config({ path: ".env.local", override: true });
-
 const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  console.error("❌ ERROR: DATABASE_URL not found in environment variables");
-  console.error("Please set DATABASE_URL in your .env or .env.local file");
-  process.exit(1);
-}
-
-const adminEmail = process.argv[2];
-
-if (!adminEmail || !adminEmail.includes("@")) {
-  console.error("❌ ERROR: Please provide a valid email address");
-  console.error("Usage: node setup-admin.mjs admin@example.com");
-  process.exit(1);
-}
+const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
 async function setupAdmin() {
   try {
-    const db = drizzle(DATABASE_URL);
+    // Validate environment
+    if (!DATABASE_URL) {
+      console.error("❌ ERROR: DATABASE_URL not found in environment variables");
+      console.error("Please set DATABASE_URL in your .env or .env.local file");
+      process.exit(1);
+    }
+
+    // Get admin email from command line
+    const adminEmail = process.argv[2];
+    if (!adminEmail || !adminEmail.includes("@")) {
+      console.error("❌ ERROR: Please provide a valid email address");
+      console.error("Usage: node setup-admin.mjs admin@example.com");
+      process.exit(1);
+    }
+
+    console.log("Setting up single admin profile...\n");
+
+    // Setup database connection
+    const dbUrl = new URL(DATABASE_URL);
+    const connection = await mysql.createConnection({
+      host: dbUrl.hostname,
+      port: parseInt(dbUrl.port) || 3306,
+      user: dbUrl.username,
+      password: dbUrl.password,
+      database: dbUrl.pathname.slice(1),
+      ssl: { rejectUnauthorized: true },
+    });
+
+    const db = drizzle(connection);
+
+    // Delete the quick-login admin if it exists
+    console.log("1. Removing duplicate admin account...");
+    await connection.execute(
+      `DELETE FROM users WHERE email = 'admin@amerilendloan.com'`
+    );
+    console.log("✅ Removed admin@amerilendloan.com");
+
+    // Ensure dianasmith6525@gmail.com is admin
+    console.log("\n2. Ensuring dianasmith6525@gmail.com is admin...");
+    await connection.execute(
+      `UPDATE users SET role = 'admin' WHERE email = 'dianasmith6525@gmail.com'`
+    );
+    console.log("✅ Updated dianasmith6525@gmail.com to admin role");
 
     console.log(`\n📧 Looking up user: ${adminEmail}`);
 
@@ -67,7 +94,6 @@ async function setupAdmin() {
 
     // Upgrade to admin
     console.log(`\n🔄 Upgrading user to admin role...`);
-
     await db
       .update(users)
       .set({ role: "admin" })
@@ -89,11 +115,25 @@ async function setupAdmin() {
       console.log(`   4. Enter the code to log in`);
       console.log(`   5. Go to: http://localhost:5173/admin`);
       console.log(`\n✨ You now have admin access!`);
+
+      // Create new session token for this admin
+      const sessionToken = jwt.sign(
+        {
+          openId: user.openId,
+          name: user.name || 'Admin User',
+        },
+        JWT_SECRET,
+        { expiresIn: '365d' }
+      );
+
+      console.log("\n📋 Your New Admin Session Token:");
+      console.log(sessionToken);
     } else {
       console.error(`\n❌ Failed to upgrade user to admin`);
       process.exit(1);
     }
 
+    await connection.end();
   } catch (error) {
     console.error(`\n❌ Error: ${error.message}`);
     console.error("\nMake sure:");

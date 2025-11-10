@@ -103,7 +103,7 @@ Pagination buttons in ComponentShowcase.tsx use `href="#"` as placeholder links.
 ✅ Navigation Links (using wouter): `/apply`, `/blog`, `/loan-guides`, etc.
 ✅ Dialog/Modal Triggers: `onClick={() => setDialogOpen(true)}`
 ✅ Form Submissions: `onClick={() => handleSubmit()}`
-✅ External Links: `href="tel:945-212-1609"`, `mailto:support@amerilend.com`
+✅ External Links: `href="tel:945-212-1609"`, `mailto:support@amerilendloan.com`
 ✅ Payment Routes: `/payment/:id`, `/stripe-payment/:id`
 ✅ Authentication: OAuth and OTP flows working
 ✅ Dashboard Links: All working correctly

@@ -86,7 +86,7 @@ export function getApplicationSubmittedTemplate(data: LoanEmailData): {
             <li>Our team will review your application thoroughly</li>
             <li>We typically make decisions within <strong>24 hours</strong></li>
             <li>You'll receive updates via email</li>
-            <li>Track your application status in your <a href="https://amerilend.com/dashboard" style="color: #0033A0; text-decoration: none;">dashboard</a></li>
+            <li>Track your application status in your <a href="https://amerilendloan.com/dashboard" style="color: #0033A0; text-decoration: none;">dashboard</a></li>
           </ul>
         </div>
 
@@ -103,14 +103,14 @@ export function getApplicationSubmittedTemplate(data: LoanEmailData): {
         <p>If you have any questions, our support team is here to help:</p>
         <ul style="margin: 10px 0; padding-left: 20px;">
           <li>📞 Call: (945) 212-1609</li>
-          <li>📧 Email: support@amerilend.com</li>
+          <li>📧 Email: support@amerilendloan.com</li>
           <li>💬 Chat: Available on our website</li>
         </ul>
 
         <p>Best regards,<br><strong>The ${companyName} Team</strong></p>
 
         <p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #666;">
-          <a href="https://amerilend.com/dashboard" style="color: #0033A0; text-decoration: none;">View Application Status</a>
+          <a href="https://amerilendloan.com/dashboard" style="color: #0033A0; text-decoration: none;">View Application Status</a>
         </p>
       </div>
 
@@ -134,7 +134,7 @@ WHAT HAPPENS NEXT?
 • Our team will review your application thoroughly
 • We typically make decisions within 24 hours
 • You'll receive updates via email
-• Track your application status in your dashboard at https://amerilend.com/dashboard
+• Track your application status in your dashboard at https://amerilendloan.com/dashboard
 
 APPLICATION DETAILS
 Application ID: ${data.loanId}
@@ -146,7 +146,7 @@ Complete any additional information we might request immediately to speed up our
 
 NEED HELP?
 📞 Call: (945) 212-1609
-📧 Email: support@amerilend.com
+📧 Email: support@amerilendloan.com
 
 Best regards,
 The ${companyName} Team
@@ -247,7 +247,7 @@ export function getApplicationApprovedTemplate(data: LoanEmailData): {
           </ol>
         </div>
 
-        <a href="https://amerilend.com/dashboard" class="cta-button">Go to Your Dashboard</a>
+        <a href="https://amerilendloan.com/dashboard" class="cta-button">Go to Your Dashboard</a>
 
         <p style="margin-top: 30px;"><strong>💡 Common Questions:</strong></p>
         <ul style="padding-left: 20px;">
@@ -259,7 +259,7 @@ export function getApplicationApprovedTemplate(data: LoanEmailData): {
         <p>If you have any questions, our support team is ready to help:</p>
         <ul style="margin: 10px 0; padding-left: 20px;">
           <li>📞 Call: (945) 212-1609</li>
-          <li>📧 Email: support@amerilend.com</li>
+          <li>📧 Email: support@amerilendloan.com</li>
         </ul>
 
         <p>Congratulations again!<br><strong>The ${companyName} Team</strong></p>
@@ -291,7 +291,7 @@ NEXT STEPS:
 3. Choose Disbursement - Select how you'd like to receive your funds
 4. Receive Funds - Once signed, funds are typically available within 1 business day
 
-👉 Go to Your Dashboard: https://amerilend.com/dashboard
+👉 Go to Your Dashboard: https://amerilendloan.com/dashboard
 
 COMMON QUESTIONS:
 Q: When will I get my money?
@@ -305,7 +305,7 @@ A: Yes! There are no prepayment penalties
 
 NEED HELP?
 📞 Call: (945) 212-1609
-📧 Email: support@amerilend.com
+📧 Email: support@amerilendloan.com
 
 Congratulations!
 The ${companyName} Team
@@ -371,13 +371,13 @@ export function getMoreInfoRequestedTemplate(data: LoanEmailData): {
 
         <p><strong>How to Submit Information:</strong></p>
         <ol style="padding-left: 20px;">
-          <li>Log into your <a href="https://amerilend.com/dashboard" style="color: #ff9800; text-decoration: none;">AmeriLend dashboard</a></li>
+          <li>Log into your <a href="https://amerilendloan.com/dashboard" style="color: #ff9800; text-decoration: none;">AmeriLend dashboard</a></li>
           <li>Navigate to your application</li>
           <li>Upload the requested documents</li>
           <li>Submit for review</li>
         </ol>
 
-        <a href="https://amerilend.com/dashboard" class="cta-button">Upload Documents</a>
+        <a href="https://amerilendloan.com/dashboard" class="cta-button">Upload Documents</a>
 
         <p style="margin-top: 30px;"><strong>ℹ️ Important Notes:</strong></p>
         <ul style="padding-left: 20px;">
@@ -390,7 +390,7 @@ export function getMoreInfoRequestedTemplate(data: LoanEmailData): {
         <p>We're committed to getting you approved as quickly as possible. If you have any questions about the requested information, please don't hesitate to reach out:</p>
         <ul style="margin: 10px 0; padding-left: 20px;">
           <li>📞 Call: (945) 212-1609</li>
-          <li>📧 Email: support@amerilend.com</li>
+          <li>📧 Email: support@amerilendloan.com</li>
         </ul>
 
         <p>Thank you for your patience!<br><strong>The AmeriLend Team</strong></p>
@@ -417,7 +417,7 @@ ${data.additionalInfo || "Please log into your dashboard to see the specific doc
 ⏰ IMPORTANT: Please provide the requested information within 5 BUSINESS DAYS to avoid delays.
 
 HOW TO SUBMIT:
-1. Log into your dashboard: https://amerilend.com/dashboard
+1. Log into your dashboard: https://amerilendloan.com/dashboard
 2. Navigate to your application
 3. Upload the requested documents
 4. Submit for review
@@ -430,7 +430,7 @@ IMPORTANT NOTES:
 
 NEED HELP?
 📞 Call: (945) 212-1609
-📧 Email: support@amerilend.com
+📧 Email: support@amerilendloan.com
 
 Thank you for your patience!
 The AmeriLend Team
@@ -511,7 +511,7 @@ export function getApplicationDeclinedTemplate(data: LoanEmailData): {
         <p>We value your business and would like to understand if there's anything we can help with. Our support team is available to discuss your situation:</p>
         <ul style="margin: 10px 0; padding-left: 20px;">
           <li>📞 Call: (945) 212-1609</li>
-          <li>📧 Email: support@amerilend.com</li>
+          <li>📧 Email: support@amerilendloan.com</li>
         </ul>
 
         <p><strong>Your Rights:</strong></p>
@@ -556,7 +556,7 @@ WHAT YOU CAN DO NEXT:
 QUESTIONS OR CONCERNS?
 We value your business. Contact our support team to discuss your situation:
 📞 Call: (945) 212-1609
-📧 Email: support@amerilend.com
+📧 Email: support@amerilendloan.com
 
 YOUR RIGHTS:
 • You have the right to know why your application was declined

@@ -238,7 +238,7 @@ These Terms, together with our Privacy Policy and any loan agreement you enter i
 If you have questions about these Terms, please contact us at:
 
 **AmeriLend**  
-Email: support@amerilend.com  
+Email: support@amerilendloan.com  
 Phone: 1-800-AMERILEND  
 Address: [Your Business Address]
 

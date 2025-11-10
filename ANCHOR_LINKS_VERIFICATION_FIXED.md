@@ -110,7 +110,7 @@ All dead anchor links in Home.tsx have been identified and fixed. Each navigatio
       <p className="mb-6">
         Send your resume and cover letter to our HR team.
       </p>
-      <a href="mailto:careers@amerilend.com">
+      <a href="mailto:careers@amerilendloan.com">
         <Button className="bg-[#FFA500] hover:bg-[#FF8C00]">
           Apply for Careers
         </Button>
@@ -125,7 +125,7 @@ All dead anchor links in Home.tsx have been identified and fixed. Each navigatio
 2. **Software Engineers** - Engineering, Full-time  
 3. **Data Analysts** - Analytics, Full-time
 
-### CTA: `careers@amerilend.com` email link
+### CTA: `careers@amerilendloan.com` email link
 
 ---
 

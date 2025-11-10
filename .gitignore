@@ -103,6 +103,9 @@ jspm_packages/
 tmp/
 temp/
 
+# Uploaded documents
+uploads/
+
 # Database
 *.db
 *.sqlite

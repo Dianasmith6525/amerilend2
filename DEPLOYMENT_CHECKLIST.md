@@ -1,4 +1,4 @@
-# 🚀 Quick Deployment Checklist for www.amerilend.net
+# 🚀 Quick Deployment Checklist for www.amerilendloan.com
 
 ## Pre-Deployment Setup
 
@@ -97,7 +97,7 @@ vercel --prod
 | `JWT_SECRET` | Your generated 32+ char string | Production |
 | `NODE_ENV` | `production` | Production |
 | `SENDGRID_API_KEY` | `SG.xxxxxx` from SendGrid | Production |
-| `SENDGRID_FROM_EMAIL` | `noreply@amerilend.net` | Production |
+| `SENDGRID_FROM_EMAIL` | `noreply@amerilendloan.com` | Production |
 | `AUTHORIZENET_API_LOGIN_ID` | From Authorize.Net | Production |
 | `AUTHORIZENET_TRANSACTION_KEY` | From Authorize.Net | Production |
 | `AUTHORIZENET_CLIENT_KEY` | From Authorize.Net | Production |
@@ -117,20 +117,20 @@ vercel --prod
 **In Vercel Dashboard:**
 1. Go to your project → **Settings** → **Domains**
 2. Click **Add Domain**
-3. Enter: `www.amerilend.net`
+3. Enter: `www.amerilendloan.com`
 4. Click **Add**
 5. Vercel will show you DNS records to add
 
 **In Squarespace:**
 1. Log into https://account.squarespace.com
 2. Go to **Settings** → **Domains**
-3. Click on **www.amerilend.net**
+3. Click on **www.amerilendloan.com**
 4. Click **DNS Settings**
 5. Add the CNAME record Vercel provided:
    - **Type:** CNAME
    - **Host:** www
    - **Value:** cname.vercel-dns.com (or what Vercel shows)
-6. For root domain (amerilend.net):
+6. For root domain (amerilendloan.com):
    - **Type:** A
    - **Host:** @
    - **Value:** 76.76.21.21 (Vercel's IP)
@@ -174,7 +174,7 @@ node setup-admin.mjs
 ### ✅ Test Checklist (in order):
 
 1. **Basic Access**
-   - [ ] Visit https://www.amerilend.net
+   - [ ] Visit https://www.amerilendloan.com
    - [ ] Page loads correctly
    - [ ] HTTPS lock icon shows (secure)
 
@@ -224,7 +224,7 @@ Before going fully live:
 - [ ] Email sending works (SendGrid configured)
 - [ ] Payments work (Authorize.Net sandbox tested)
 - [ ] HTTPS enabled (automatic with Vercel)
-- [ ] Custom domain working (www.amerilend.net)
+- [ ] Custom domain working (www.amerilendloan.com)
 - [ ] All features tested on production
 - [ ] Mobile responsive design tested
 - [ ] Legal pages accessible (Terms, Privacy)
@@ -274,7 +274,7 @@ Before going fully live:
 ## 🎉 You're Live!
 
 Once all checklist items are complete, your AmeriLend platform is **LIVE** at:
-**https://www.amerilend.net**
+**https://www.amerilendloan.com**
 
 Share with customers and start accepting loan applications! 🚀
 

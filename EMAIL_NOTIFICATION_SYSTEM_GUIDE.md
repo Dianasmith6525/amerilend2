@@ -284,7 +284,7 @@ Edit `loanEmailTemplates.ts` template functions:
 Replace these in each template:
 ```typescript
 📞 Call: (945) 212-1609
-📧 Email: support@amerilend.com
+📧 Email: support@amerilendloan.com
 💬 Chat: Available on our website
 ```
 
@@ -384,7 +384,7 @@ try {
 ### Pre-Deployment Checklist
 - ✅ SendGrid API key configured in production env
 - ✅ Sender email verified in SendGrid
-- ✅ From email matches brand (support@amerilend.com)
+- ✅ From email matches brand (support@amerilendloan.com)
 - ✅ Email templates tested with real emails
 - ✅ Support email/phone is current
 - ✅ Links point to production domain

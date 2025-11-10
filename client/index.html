@@ -23,10 +23,17 @@
     <!-- Moved to Home.tsx component to load conditionally -->
     
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
+    <!-- Umami Analytics - Only loads if VITE_ANALYTICS_ENDPOINT is configured -->
+    <script>
+      if ('%VITE_ANALYTICS_ENDPOINT%' && '%VITE_ANALYTICS_ENDPOINT%' !== '') {
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.defer = true;
+        script.src = '%VITE_ANALYTICS_ENDPOINT%/umami';
+        script.setAttribute('data-website-id', '%VITE_ANALYTICS_WEBSITE_ID%');
+        document.body.appendChild(script);
+      }
+    </script>
   </body>
 
 </html>

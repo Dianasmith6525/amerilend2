@@ -120,7 +120,7 @@ export async function verifyOTP(
 export async function sendOTPEmail(
   email: string,
   code: string,
-  purpose: "signup" | "login"
+  purpose: "signup" | "login" | "password_reset"
 ): Promise<void> {
   try {
     await sendEmailOTP({

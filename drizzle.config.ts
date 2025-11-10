@@ -11,7 +11,9 @@ export default defineConfig({
   dialect: "mysql",
   dbCredentials: {
     url: connectionString,
-    ssl: "amazon" // TiDB Cloud requires SSL
+    ssl: {
+      rejectUnauthorized: false
+    }
   },
 });
 

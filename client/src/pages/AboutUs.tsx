@@ -1,28 +1,31 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ChevronLeft } from "lucide-react";
+import SEO from "@/components/SEO";
 
 export default function AboutUs() {
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="About Us - Our Mission & Values"
+        description="Learn about AmeriLend's mission to provide accessible personal loans with quick approvals, competitive rates, and same-day funding. Discover our commitment to transparency and customer service."
+        ogType="website"
+      />
+      
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link href="/">
-              <a className="text-2xl font-bold">
-                <span className="text-[#0033A0]">Ameri</span>
-                <span className="text-[#D4AF37]">Lend</span>
-                <sup className="text-xs text-[#0033A0]">®</sup>
-              </a>
+            <Link href="/" className="text-2xl font-bold">
+              <span className="text-[#0033A0]">Ameri</span>
+              <span className="text-[#D4AF37]">Lend</span>
+              <sup className="text-xs text-[#0033A0]">®</sup>
             </Link>
-            <Link href="/">
-              <a className="inline-block">
-                <Button variant="outline" className="border-[#0033A0] text-[#0033A0]">
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Back Home
-                </Button>
-              </a>
+            <Link href="/" className="inline-block">
+              <Button variant="outline" className="border-[#0033A0] text-[#0033A0]">
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back Home
+              </Button>
             </Link>
           </div>
         </div>
@@ -72,7 +75,7 @@ export default function AboutUs() {
             <div className="bg-gray-50 p-6 rounded-lg">
               <p className="text-gray-700">
                 <strong>Phone:</strong> <a href="tel:945-212-1609" className="text-[#0033A0] hover:underline">(945) 212-1609</a><br />
-                <strong>Email:</strong> <a href="mailto:support@amerilend.com" className="text-[#0033A0] hover:underline">support@amerilend.com</a><br />
+                <strong>Email:</strong> <a href="mailto:support@amerilendloan.com" className="text-[#0033A0] hover:underline">support@amerilendloan.com</a><br />
                 <strong>Hours:</strong> Monday – Friday, 7 a.m. – 11:00 p.m. and Saturday and Sunday, 9 a.m. – 5:00 p.m. Central Time
               </p>
             </div>

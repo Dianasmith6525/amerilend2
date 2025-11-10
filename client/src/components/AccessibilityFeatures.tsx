@@ -24,7 +24,7 @@ export function useKeyboardNavigation(onEscape?: () => void) {
 /**
  * Accessibility Hook: Focus management for modals and sheets
  */
-export function useFocusTrap(ref: React.RefObject<HTMLDivElement>, isActive: boolean) {
+export function useFocusTrap(ref: React.RefObject<HTMLDivElement | null>, isActive: boolean) {
   useEffect(() => {
     if (!isActive || !ref.current) return;
 

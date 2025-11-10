@@ -10,14 +10,14 @@ When sending from Gmail addresses (like `dianasmith6525@gmail.com`) through Send
 
 ### Option 1: Use Your Own Domain (RECOMMENDED)
 
-Instead of sending from `@gmail.com`, use your own domain (e.g., `noreply@amerilend.com`).
+Instead of sending from `@gmail.com`, use your own domain (e.g., `noreply@amerilendloan.com`).
 
 #### Step 1: Set Up Domain Authentication in SendGrid
 
 1. Go to https://app.sendgrid.com/settings/sender_auth
 2. Click **"Authenticate Your Domain"**
 3. Choose your DNS host (e.g., GoDaddy, Namecheap, Cloudflare)
-4. Enter your domain: `amerilend.com`
+4. Enter your domain: `amerilendloan.com`
 5. Click **"Next"**
 
 #### Step 2: Add DNS Records
@@ -25,9 +25,9 @@ Instead of sending from `@gmail.com`, use your own domain (e.g., `noreply@ameril
 SendGrid will provide DNS records to add:
 
 ```
-CNAME: em1234.amerilend.com → u12345.wl123.sendgrid.net
-CNAME: s1._domainkey.amerilend.com → s1.domainkey.u12345.wl123.sendgrid.net
-CNAME: s2._domainkey.amerilend.com → s2.domainkey.u12345.wl123.sendgrid.net
+CNAME: em1234.amerilendloan.com → u12345.wl123.sendgrid.net
+CNAME: s1._domainkey.amerilendloan.com → s1.domainkey.u12345.wl123.sendgrid.net
+CNAME: s2._domainkey.amerilendloan.com → s2.domainkey.u12345.wl123.sendgrid.net
 ```
 
 1. Log in to your domain registrar (GoDaddy, Namecheap, etc.)
@@ -39,7 +39,7 @@ CNAME: s2._domainkey.amerilend.com → s2.domainkey.u12345.wl123.sendgrid.net
 #### Step 3: Update Your .env File
 
 ```bash
-SENDGRID_FROM_EMAIL=noreply@amerilend.com
+SENDGRID_FROM_EMAIL=noreply@amerilendloan.com
 ```
 
 ### Option 2: Keep Using Gmail (Quick Fix)

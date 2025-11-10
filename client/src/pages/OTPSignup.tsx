@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react';
 import { useLocation, Link } from 'wouter';
-import { ArrowLeft, PartyPopper } from 'lucide-react';
+import { ArrowLeft, PartyPopper, Eye, EyeOff } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +80,8 @@ export default function OTPSignup() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [authMethod, setAuthMethod] = useState('password');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSocialSignup = (provider: string) => {
     toast.info(`${provider} signup coming soon!`);
@@ -90,42 +92,57 @@ export default function OTPSignup() {
   const passwordRegisterMutation = trpc.password.register.useMutation({
     onSuccess: (data) => {
       const userEmail = data.user?.email?.split('@')[0] || 'User';
-      toast.success(`✅ Welcome to AmeriLend, ${userEmail}!`, {
-        description: 'Your account has been created successfully. Let\'s get you a loan!',
-        duration: 3000,
-      });
       
-      // Trigger welcome confetti
-      const duration = 2000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
-
-      const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-      const interval: any = setInterval(() => {
-        const timeLeft = animationEnd - Date.now();
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-          colors: ['#0033A0', '#FFA500', '#D4AF37', '#00A651']
+      if (data.requiresVerification) {
+        // New flow: redirect to email verification
+        toast.success(`✅ Account Created, ${userEmail}!`, {
+          description: 'Check your email to verify your account',
+          duration: 3000,
         });
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-          colors: ['#0033A0', '#FFA500', '#D4AF37', '#00A651']
+        
+        // Redirect to verification page
+        setTimeout(() => {
+          window.location.href = '/verify-email';
+        }, 1500);
+      } else {
+        // Fallback (if verification not required)
+        toast.success(`✅ Welcome to AmeriLend, ${userEmail}!`, {
+          description: 'Your account has been created successfully. Let\'s get you a loan!',
+          duration: 3000,
         });
-      }, 250);
-      
-      setTimeout(() => {
-        window.location.href = '/apply';
-      }, 1500);
+        
+        // Trigger welcome confetti
+        const duration = 2000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
+
+        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+        const interval: any = setInterval(() => {
+          const timeLeft = animationEnd - Date.now();
+          if (timeLeft <= 0) {
+            return clearInterval(interval);
+          }
+
+          const particleCount = 50 * (timeLeft / duration);
+          confetti({
+            ...defaults,
+            particleCount,
+            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+            colors: ['#0033A0', '#FFA500', '#D4AF37', '#00A651']
+          });
+          confetti({
+            ...defaults,
+            particleCount,
+            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+            colors: ['#0033A0', '#FFA500', '#D4AF37', '#00A651']
+          });
+        }, 250);
+        
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1500);
+      }
     },
     onError: (error) => {
       toast.error("❌ Account Creation Failed", {
@@ -188,7 +205,7 @@ export default function OTPSignup() {
       }, 250);
       
       setTimeout(() => {
-        window.location.href = '/apply';
+        window.location.href = '/dashboard';
       }, 1500);
     },
     onError: (error) => {
@@ -258,200 +275,194 @@ export default function OTPSignup() {
   };
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4'>
-      <Card className='w-full max-w-md'>
-        <CardHeader>
-          <div className='flex items-center gap-2 mb-2'>
-            <Link href='/'>
-              <Button variant='ghost' size='sm' className='p-0 h-8 w-8'>
-                <ArrowLeft className='h-4 w-4' />
-              </Button>
-            </Link>
-          </div>
-          <CardTitle className='text-2xl'>Create Account</CardTitle>
-          <CardDescription>
-            {step === 'verify' 
-              ? 'Enter the verification code sent to your email'
-              : 'Choose your preferred signup method'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {step === 'email' ? (
-            <>
-              <Tabs value={authMethod} onValueChange={(v) => setAuthMethod(v)} className='w-full'>
-              <TabsList className='grid w-full grid-cols-2'>
-                <TabsTrigger value='password'>Password</TabsTrigger>
-                <TabsTrigger value='otp'>Email Code</TabsTrigger>
-              </TabsList>
+    <div className='min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 py-12'>
+      <Link href='/'>
+        <button className="absolute top-4 left-4 flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-gray-100 rounded-lg transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium">Back Home</span>
+        </button>
+      </Link>
 
-              <TabsContent value='password'>
-                <form onSubmit={handlePasswordSignup} className='space-y-4 mt-4'>
-                  <div className='space-y-2'>
-                    <Label htmlFor='email'>Email Address</Label>
-                    <Input
-                      id='email'
-                      type='email'
-                      placeholder='you@example.com'
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoFocus
-                    />
-                  </div>
+      <div className='w-full max-w-4xl'>
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <h1 className="text-3xl font-bold"><span className="text-blue-600">Ameri</span><span className="text-yellow-600">Lend</span></h1>
+          <p className="text-gray-600 mt-2">Create Your Account</p>
+        </div>
 
-                  <div className='space-y-2'>
-                    <Label htmlFor='password'>Password</Label>
-                    <Input
-                      id='password'
-                      type='password'
-                      placeholder='At least 8 characters'
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
+        <Card className="shadow-2xl border-0 rounded-2xl overflow-hidden">
+          <CardContent className="py-8 px-6">
+            {step === 'email' ? (
+              <div className="space-y-8">
+                <h2 className="text-3xl font-bold text-center mb-8">Sign Up</h2>
 
-                  <div className='space-y-2'>
-                    <Label htmlFor='confirmPassword'>Confirm Password</Label>
-                    <Input
-                      id='confirmPassword'
-                      type='password'
-                      placeholder='Re-enter your password'
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
+                <form onSubmit={handlePasswordSignup} className='space-y-4'>
+                  <div className='space-y-4'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='email' className='text-base'>Email Address</Label>
+                      <Input
+                        id='email'
+                        type='email'
+                        placeholder='you@example.com'
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        autoFocus
+                        className='pl-4 h-12 text-base border-2 border-gray-200 rounded-xl focus:border-blue-600'
+                      />
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label htmlFor='password' className='text-base'>Create Password</Label>
+                      <div className='relative'>
+                        <Input
+                          id='password'
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder='Min. 8 characters'
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                          className='pl-4 pr-12 h-12 text-base border-2 border-gray-200 rounded-xl focus:border-blue-600'
+                        />
+                        <button
+                          type='button'
+                          onClick={() => setShowPassword(!showPassword)}
+                          className='absolute right-3 top-3 text-gray-600 hover:text-gray-900 transition-colors'
+                          tabIndex={-1}
+                        >
+                          {showPassword ? (
+                            <EyeOff className='w-5 h-5' />
+                          ) : (
+                            <Eye className='w-5 h-5' />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label htmlFor='confirmPassword' className='text-base'>Confirm Password</Label>
+                      <div className='relative'>
+                        <Input
+                          id='confirmPassword'
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          placeholder='Re-enter password'
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                          className='pl-4 pr-12 h-12 text-base border-2 border-gray-200 rounded-xl focus:border-blue-600'
+                        />
+                        <button
+                          type='button'
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className='absolute right-3 top-3 text-gray-600 hover:text-gray-900 transition-colors'
+                          tabIndex={-1}
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className='w-5 h-5' />
+                          ) : (
+                            <Eye className='w-5 h-5' />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
 
                   <Button 
                     type='submit' 
-                    className='w-full'
+                    className='w-full h-12 bg-blue-600 hover:bg-blue-700 text-white text-base font-semibold rounded-xl'
                     disabled={passwordRegisterMutation.isPending}
                   >
-                    {passwordRegisterMutation.isPending ? 'Creating Account...' : 'Create Account'}
+                    {passwordRegisterMutation.isPending ? 'Creating Account...' : 'Sign Up'}
                   </Button>
                 </form>
-              </TabsContent>
 
-              <TabsContent value='otp'>
-                <form onSubmit={handleSendCode} className='space-y-4 mt-4'>
-                  <div className='space-y-2'>
-                    <Label htmlFor='email-otp'>Email Address</Label>
-                    <Input
-                      id='email-otp'
-                      type='email'
-                      placeholder='you@example.com'
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoFocus
-                    />
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator className="w-full" />
                   </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="px-2 bg-white text-gray-500 font-medium">Or continue with</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {SOCIAL_PROVIDERS.map((provider) => (
+                    <Button
+                      key={provider.name}
+                      type="button"
+                      variant="outline"
+                      className="w-full h-12 border-2 border-gray-300 hover:bg-gray-50 rounded-xl text-base font-medium transition-all"
+                      onClick={() => handleSocialSignup(provider.name)}
+                    >
+                      <span className="mr-3">{provider.icon}</span>
+                      {provider.name === "Google" ? "Sign up with Google" : `Sign up with ${provider.name}`}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="text-center text-sm pt-4">
+                  <span className="text-gray-600">
+                    Already have an account?{" "}
+                    <Link href="/login">
+                      <span className="text-blue-600 hover:underline cursor-pointer font-semibold">
+                        Log in
+                      </span>
+                    </Link>
+                  </span>
+                </div>
+              </div>
+            ) : step === 'verify' ? (
+              <div className="space-y-8">
+                <div>
+                  <h2 className="text-3xl font-bold">Verify Email</h2>
+                  <p className="text-base text-gray-600 mt-3">Enter the code sent to {email}</p>
+                </div>
+
+                <form onSubmit={handleVerify} className='space-y-6'>
+                  <Input
+                    type='text'
+                    placeholder='000000'
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    className='text-center text-3xl tracking-widest font-mono h-12 rounded-lg'
+                    required
+                  />
 
                   <Button 
                     type='submit' 
-                    className='w-full'
+                    className='w-full h-12 bg-blue-600 hover:bg-blue-700 text-base font-semibold rounded-lg'
+                    disabled={verifyCodeMutation.isPending}
+                  >
+                    {verifyCodeMutation.isPending ? 'Verifying...' : 'Verify & Continue'}
+                  </Button>
+
+                  <Button
+                    type='button'
+                    variant='outline'
+                    className='w-full h-12 border-2 border-gray-200 rounded-lg text-base'
+                    onClick={handleResendCode}
                     disabled={requestCodeMutation.isPending}
                   >
-                    {requestCodeMutation.isPending ? 'Sending...' : 'Send Verification Code'}
+                    {requestCodeMutation.isPending ? 'Resending...' : 'Resend Code'}
                   </Button>
                 </form>
-              </TabsContent>
-            </Tabs>
-
-            <div className='relative my-6'>
-              <Separator />
-              <span className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs text-muted-foreground'>
-                Or continue with
-              </span>
-            </div>
-
-            <div className='space-y-3'>
-              {SOCIAL_PROVIDERS.map((provider) => (
-                <Button
-                  key={provider.name}
-                  type='button'
-                  variant='outline'
-                  className={`w-full ${provider.color}`}
-                  onClick={() => handleSocialSignup(provider.name)}
-                >
-                  <span className='mr-2'>{provider.icon}</span>
-                  Continue with {provider.name}
-                </Button>
-              ))}
-            </div>
-            </>
-          ) : (
-            <form onSubmit={handleVerify} className='space-y-6'>
-              <div className='space-y-2'>
-                <Label htmlFor='otp'>Verification Code</Label>
-                <div className='flex justify-center'>
-                  <InputOTP
-                    maxLength={6}
-                    value={otp}
-                    onChange={(value) => setOtp(value)}
-                  >
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                <p className='text-xs text-center text-muted-foreground mt-2'>
-                  Code sent to {email}
-                </p>
               </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
-              <Button 
-                type='submit' 
-                className='w-full'
-                disabled={verifyCodeMutation.isPending || otp.length !== 6}
-              >
-                {verifyCodeMutation.isPending ? 'Verifying...' : 'Verify & Create Account'}
-              </Button>
-
-              <div className='space-y-2'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  className='w-full'
-                  onClick={handleResendCode}
-                  disabled={requestCodeMutation.isPending}
-                >
-                  {requestCodeMutation.isPending ? 'Sending...' : 'Resend Code'}
-                </Button>
-
-                <Button
-                  type='button'
-                  variant='ghost'
-                  className='w-full'
-                  onClick={() => {
-                    setStep('email');
-                    setOtp('');
-                  }}
-                >
-                  Change Email
-                </Button>
-              </div>
-            </form>
-          )}
-
-          <div className='mt-6 text-center text-sm'>
-            <p className='text-muted-foreground'>
-              Already have an account?{' '}
-              <Link href='/login'>
-                <span className='text-primary hover:underline cursor-pointer font-medium'>
-                  Log in here
-                </span>
-              </Link>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        <p className="text-center text-xs text-gray-600 mt-6">
+          By continuing, you agree to our{" "}
+          <Link href="/legal/terms_of_service">
+            <span className="text-blue-600 hover:underline cursor-pointer">Terms of Service</span>
+          </Link>
+          {" "}and{" "}
+          <Link href="/legal/privacy_policy">
+            <span className="text-blue-600 hover:underline cursor-pointer">Privacy Policy</span>
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

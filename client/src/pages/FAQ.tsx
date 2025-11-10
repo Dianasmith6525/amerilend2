@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { CodeButton } from "@/components/ui/CodeButton";
 import { Link } from "wouter";
 import { ChevronLeft, ArrowRight } from "lucide-react";
+import SEO from "@/components/SEO";
 
 export default function FAQ() {
   const faqs = [
@@ -133,24 +134,26 @@ export default function FAQ() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Frequently Asked Questions"
+        description="Find answers to common questions about AmeriLend personal loans, application process, rates, terms, and loan types. Get quick answers about credit requirements, funding speed, and more."
+        ogType="website"
+      />
+      
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link href="/">
-              <a className="text-2xl font-bold">
-                <span className="text-[#0033A0]">Ameri</span>
-                <span className="text-[#D4AF37]">Lend</span>
-                <sup className="text-xs text-[#0033A0]">®</sup>
-              </a>
+            <Link href="/" className="text-2xl font-bold">
+              <span className="text-[#0033A0]">Ameri</span>
+              <span className="text-[#D4AF37]">Lend</span>
+              <sup className="text-xs text-[#0033A0]">®</sup>
             </Link>
-            <Link href="/">
-              <a className="inline-block">
-                <Button variant="outline" className="border-[#0033A0] text-[#0033A0]">
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Back Home
-                </Button>
-              </a>
+            <Link href="/" className="inline-block">
+              <Button variant="outline" className="border-[#0033A0] text-[#0033A0]">
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back Home
+              </Button>
             </Link>
           </div>
         </div>
@@ -180,7 +183,7 @@ export default function FAQ() {
                   Call (945) 212-1609
                 </CodeButton>
               </a>
-              <a href="mailto:support@amerilend.com" className="inline-block">
+              <a href="mailto:support@amerilendloan.com" className="inline-block">
                 <Button variant="outline" className="border-[#0033A0] text-[#0033A0] hover:bg-[#0033A0] hover:text-white px-8 py-6 w-full sm:w-auto">
                   Email Support
                 </Button>

@@ -12,7 +12,7 @@
 │ ┌─────────────────────────────────────┐  │
 │ │ REF123ABC456        [COPY]          │  │ ← Your Code
 │ ├─────────────────────────────────────┤  │
-│ │ https://amerilend.com/signup?ref... │  │
+│ │ https://amerilendloan.com/signup?ref... │  │
 │ │                         [COPY LINK] │  │ ← Share Link
 │ ├─────────────────────────────────────┤  │
 │ │ [Share via Email] [Share on Social] │  │ ← Share Buttons

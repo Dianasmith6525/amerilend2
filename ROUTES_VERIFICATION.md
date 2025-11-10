@@ -63,7 +63,7 @@
 - `/privacy-policy` (inline link) - Route exists
 - `/terms-of-use` (inline link) - Route exists
 - `tel:1-800-555-0100` - Valid tel link
-- `mailto:info@amerilend.com` - Valid email link
+- `mailto:info@amerilendloan.com` - Valid email link
 
 #### ✅ Verified Dashboard Page Links
 - `/` (logo) - Route exists

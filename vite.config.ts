@@ -6,7 +6,6 @@ import path from "path";
 import { defineConfig } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
-
 const plugins = [react(), tailwindcss(), /* jsxLocPlugin(), */ vitePluginManusRuntime()];
 
 export default defineConfig({
@@ -27,6 +26,7 @@ export default defineConfig({
   },
   server: {
     host: true,
+    strictPort: false,
     allowedHosts: [
       ".manuspre.computer",
       ".manus.computer",
@@ -35,10 +35,23 @@ export default defineConfig({
       ".manusvm.computer",
       "localhost",
       "127.0.0.1",
+      ".testsprite.com",
     ],
     fs: {
-      strict: true,
-      deny: ["**/.*"],
+      strict: false,
+      allow: ['..'],
+    },
+    cors: true,
+    hmr: {
+      overlay: true,
+      clientPort: 3001,
+    },
+    proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, "/api"),
+      },
     },
   },
 });

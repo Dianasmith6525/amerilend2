@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Settings, DollarSign, CheckCircle, XCircle, Send, ArrowLeft, PartyPopper, Eye, MapPin, Briefcase, User, Calendar, FileText, AlertCircle, TrendingUp, Activity } from "lucide-react";
-import { useState } from "react";
+import { Loader2, Settings, DollarSign, CheckCircle, XCircle, Send, ArrowLeft, PartyPopper, Eye, MapPin, Briefcase, User, Calendar, FileText, AlertCircle, Download, Image as ImageIcon, File, Upload } from "lucide-react";
+import { useState, useEffect } from "react";
 import { FullPageLoader, Loader } from "@/components/ui/loader";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -75,9 +75,42 @@ export default function AdminDashboard() {
     application: null,
   });
 
+  // Document viewer state
+  const [viewingDocument, setViewingDocument] = useState<{ open: boolean; document: any | null }>({
+    open: false,
+    document: null,
+  });
+
   const { data: applications, isLoading } = trpc.loans.adminList.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
   });
+
+  // Debug log to see what data we're getting
+  useEffect(() => {
+    if (applications && applications.length > 0) {
+      console.log('[AdminDashboard] Applications data received:', {
+        count: applications.length,
+        firstApp: {
+          id: applications[0].id,
+          name: applications[0].fullName,
+          requestedAmount: applications[0].requestedAmount,
+          monthlyIncome: applications[0].monthlyIncome,
+          approvedAmount: applications[0].approvedAmount,
+          type: typeof applications[0].requestedAmount,
+        }
+      });
+    }
+  }, [applications]);
+
+  // Calculate totals from applications - TEST: Try without division
+  const totalRequested = applications?.reduce((sum, app) => {
+    const amount = app.requestedAmount ? Number(app.requestedAmount) : 0;
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0) ?? 0;
+  const totalApproved = applications?.reduce((sum, app) => {
+    const amount = app.approvedAmount ? Number(app.approvedAmount) : 0;
+    return sum + (isNaN(amount) ? 0 : amount);
+  }, 0) ?? 0;
 
   const { data: feeConfig } = trpc.feeConfig.getActive.useQuery();
 
@@ -161,6 +194,16 @@ export default function AdminDashboard() {
     },
     onError: (error) => {
       toast.error(error.message || "Failed to update fee configuration");
+    },
+  });
+
+  const updateDocumentStatusMutation = trpc.admin.updateDocumentStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Document status updated");
+      utils.loans.adminList.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update document status");
     },
   });
 
@@ -251,7 +294,7 @@ export default function AdminDashboard() {
   if (!isAuthenticated || user?.role !== "admin") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30">
-        <Card className="max-w-md">
+        <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Admin Access Required</CardTitle>
             <CardDescription>
@@ -286,10 +329,12 @@ export default function AdminDashboard() {
               </Button>
             </Link>
             <Link href="/">
-              <div className="flex items-center gap-3 cursor-pointer">
-                {APP_LOGO && <img src={APP_LOGO} alt={APP_TITLE} className="h-8 w-8" />}
-                <h1 className="text-2xl font-bold"><span className="text-blue-600">Ameri</span><span className="text-yellow-600">Lend</span></h1>
-                <Badge variant="secondary">Admin</Badge>
+              <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                <img src="/logo-icon.png" alt="AmeriLend Logo" className="h-14 w-14 object-contain" />
+                <div className="flex flex-col items-start">
+                  <h1 className="text-xl font-bold leading-none"><span className="text-blue-600">Ameri</span><span className="text-yellow-600">Lend</span></h1>
+                  <Badge variant="secondary" className="text-xs">Admin Portal</Badge>
+                </div>
               </div>
             </Link>
           </div>
@@ -318,6 +363,35 @@ export default function AdminDashboard() {
 
             {/* Applications Tab */}
             <TabsContent value="applications" className="space-y-6">
+              {/* Summary Statistics */}
+              {applications && applications.length > 0 && (
+                <div className="grid md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Total Applications</CardDescription>
+                      <CardTitle className="text-3xl">{applications.length}</CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Total Requested</CardDescription>
+                      <CardTitle className="text-3xl text-blue-600">
+                        ${totalRequested.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardDescription>Total Approved</CardDescription>
+                      <CardTitle className="text-3xl text-green-600">
+                        ${totalApproved.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                </div>
+              )}
+
+              {/* Applications List */}
               {isLoading ? (
                 <div className="flex justify-center py-12">
                   <Loader text="Loading applications..." />
@@ -340,36 +414,22 @@ export default function AdminDashboard() {
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {/* Fraud Score Badge */}
-                        {app.fraudScore !== undefined && (
-                          <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200">
-                            <AlertCircle className="h-5 w-5 text-purple-600" />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-purple-900">Fraud Risk Score</p>
-                              <p className="text-2xl font-bold text-purple-700">{app.fraudScore}/100</p>
-                            </div>
-                            <Badge className={
-                              app.fraudScore >= 80 ? "bg-red-100 text-red-800 border-red-300" :
-                              app.fraudScore >= 50 ? "bg-yellow-100 text-yellow-800 border-yellow-300" :
-                              "bg-green-100 text-green-800 border-green-300"
-                            }>
-                              {app.fraudScore >= 80 ? "⛔ BLOCKED" : app.fraudScore >= 50 ? "⚠️ REVIEW" : "✅ SAFE"}
-                            </Badge>
-                          </div>
-                        )}
-
                         <div className="grid md:grid-cols-4 gap-4">
                           <div>
                             <p className="text-sm text-muted-foreground">Requested</p>
                             <p className="font-semibold">
-                              ${(app.requestedAmount / 100).toLocaleString()}
+                              {app.requestedAmount !== null && app.requestedAmount !== undefined ? (
+                                `$${Number(app.requestedAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              ) : (
+                                <span className="text-red-500">N/A</span>
+                              )}
                             </p>
                           </div>
                           {app.approvedAmount && (
                             <div>
                               <p className="text-sm text-muted-foreground">Approved</p>
                               <p className="font-semibold text-accent">
-                                ${(app.approvedAmount / 100).toLocaleString()}
+                                ${Number(app.approvedAmount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
                             </div>
                           )}
@@ -377,14 +437,18 @@ export default function AdminDashboard() {
                             <div>
                               <p className="text-sm text-muted-foreground">Processing Fee</p>
                               <p className="font-semibold">
-                                ${(app.processingFeeAmount / 100).toFixed(2)}
+                                ${Number(app.processingFeeAmount).toFixed(2)}
                               </p>
                             </div>
                           )}
                           <div>
                             <p className="text-sm text-muted-foreground">Monthly Income</p>
                             <p className="font-semibold">
-                              ${(app.monthlyIncome / 100).toLocaleString()}
+                              {app.monthlyIncome !== null && app.monthlyIncome !== undefined ? (
+                                `$${Number(app.monthlyIncome).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              ) : (
+                                <span className="text-red-500">N/A</span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -429,7 +493,7 @@ export default function AdminDashboard() {
                                 size="sm"
                                 onClick={() => {
                                   setApprovalDialog({ open: true, applicationId: app.id });
-                                  setApprovalAmount((app.requestedAmount / 100).toString());
+                                  setApprovalAmount((Number(app.requestedAmount) / 100).toString());
                                 }}
                               >
                                 <CheckCircle className="mr-2 h-4 w-4" />
@@ -757,7 +821,7 @@ export default function AdminDashboard() {
 
       {/* Disbursement Dialog */}
       <Dialog open={disbursementDialog.open} onOpenChange={(open) => setDisbursementDialog({ ...disbursementDialog, open })}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="!w-11/12 !max-w-none max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Initiate Loan Disbursement</DialogTitle>
             <DialogDescription>
@@ -946,99 +1010,38 @@ export default function AdminDashboard() {
       <Dialog open={customerDetailsDialog.open} onOpenChange={(open) => {
         if (!open) setCustomerDetailsDialog({ open: false, application: null });
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Customer Full Information & Loan Decision</DialogTitle>
+            <DialogTitle>Customer Full Information</DialogTitle>
             <DialogDescription>
-              Complete application details with fraud analysis for approval/decline decision
+              Complete application and customer details
             </DialogDescription>
           </DialogHeader>
 
           {customerDetailsDialog.application && (
-            <div className="space-y-6">
-              {/* DECISION SUMMARY - At the top for quick assessment */}
-              <div className="grid md:grid-cols-3 gap-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg border-2 border-blue-300">
-                {/* Fraud Score Card */}
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-slate-600">Fraud Risk Assessment</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-3xl font-bold">
-                      {customerDetailsDialog.application.fraudScore ?? 0}
-                    </p>
-                    <p className="text-xs text-muted-foreground">/100</p>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Personal Information */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Personal Information
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Full Name</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.fullName}</p>
                   </div>
-                  <Badge className={
-                    (customerDetailsDialog.application.fraudScore ?? 0) >= 80 ? "bg-red-100 text-red-800 border-red-300 w-full justify-center" :
-                    (customerDetailsDialog.application.fraudScore ?? 0) >= 50 ? "bg-yellow-100 text-yellow-800 border-yellow-300 w-full justify-center" :
-                    "bg-green-100 text-green-800 border-green-300 w-full justify-center"
-                  }>
-                    {(customerDetailsDialog.application.fraudScore ?? 0) >= 80 ? "🚨 HIGH RISK" : 
-                     (customerDetailsDialog.application.fraudScore ?? 0) >= 50 ? "⚠️ MEDIUM RISK" : 
-                     "✅ LOW RISK"}
-                  </Badge>
-                  {customerDetailsDialog.application.fraudScore !== undefined && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {customerDetailsDialog.application.fraudScore >= 80 ? "Auto-rejected" : 
-                       customerDetailsDialog.application.fraudScore >= 50 ? "Requires manual review" : 
-                       "Eligible for approval"}
-                    </p>
-                  )}
-                </div>
-
-                {/* Debt-to-Income Ratio */}
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-slate-600">Debt-to-Income Analysis</p>
-                  {customerDetailsDialog.application.monthlyIncome && customerDetailsDialog.application.requestedAmount ? (
-                    <>
-                      <p className="text-2xl font-bold text-blue-700">
-                        {Math.round((customerDetailsDialog.application.requestedAmount / 100) / (customerDetailsDialog.application.monthlyIncome / 100) * 100)}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {((customerDetailsDialog.application.requestedAmount / 100) / (customerDetailsDialog.application.monthlyIncome / 100) * 100) <= 50 
-                          ? "✅ Acceptable" 
-                          : "⚠️ High ratio"}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">N/A</p>
-                  )}
-                </div>
-
-                {/* Employment & Financial Status */}
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-slate-600">Financial Health</p>
-                  <Badge variant="outline" className="w-full justify-center mb-2">
-                    {customerDetailsDialog.application.employmentStatus?.replace(/_/g, ' ') || "Unknown"}
-                  </Badge>
-                  <div className="text-xs space-y-1">
-                    {customerDetailsDialog.application.priorBankruptcy ? (
-                      <p className="text-red-600 font-medium">⚠️ Prior bankruptcy</p>
-                    ) : (
-                      <p className="text-green-600">✅ No bankruptcy</p>
-                    )}
+                  <div>
+                    <p className="text-muted-foreground">Middle Initial</p>
+                    <p className="font-semibold">{customerDetailsDialog.application.middleInitial || "N/A"}</p>
                   </div>
-                </div>
-              </div>
-
-              {/* Fraud Flags */}
-              {customerDetailsDialog.application.fraudFlags && 
-               typeof customerDetailsDialog.application.fraudFlags === 'object' && 
-               Object.keys(customerDetailsDialog.application.fraudFlags).length > 0 && (
-                <div className="space-y-3 p-3 bg-red-50 border border-red-300 rounded-lg">
-                  <h4 className="font-semibold text-red-900 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Fraud Flags Detected
-                  </h4>
-                  <ul className="text-sm text-red-800 space-y-1">
-                    {Object.entries(customerDetailsDialog.application.fraudFlags).map(([key, value]: any) => (
-                      <li key={key} className="flex items-start gap-2">
-                        <span className="text-red-600 mt-1">•</span>
-                        <span>{typeof value === 'string' ? value : key}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                  <div>
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-semibold break-all">{customerDetailsDialog.application.email}</p>
+                  </div>
+                  <div>
                     <p className="text-muted-foreground">Phone</p>
                     <p className="font-semibold">{customerDetailsDialog.application.phone}</p>
                   </div>
@@ -1174,7 +1177,7 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <p className="text-muted-foreground">Requested Amount</p>
-                    <p className="font-semibold text-blue-600">${(customerDetailsDialog.application.requestedAmount / 100).toLocaleString()}</p>
+                    <p className="font-semibold text-blue-600">${(Number(customerDetailsDialog.application.requestedAmount) / 100).toLocaleString()}</p>
                   </div>
                   {customerDetailsDialog.application.approvedAmount && (
                     <div>
@@ -1252,6 +1255,165 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               )}
+
+              {/* Verification Documents */}
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Verification Documents
+                  </h3>
+                </div>
+                
+                {customerDetailsDialog.application.documents && customerDetailsDialog.application.documents.length > 0 ? (
+                  <div className="space-y-4">
+                    {customerDetailsDialog.application.documents.map((doc: any) => {
+                      const isImage = doc.mimeType?.startsWith('image/');
+                      const isPDF = doc.mimeType === 'application/pdf';
+                      const statusColor = 
+                        doc.status === 'approved' ? 'bg-green-100 text-green-800 border-green-300' :
+                        doc.status === 'rejected' ? 'bg-red-100 text-red-800 border-red-300' :
+                        doc.status === 'needs_reupload' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                        'bg-yellow-100 text-yellow-800 border-yellow-300';
+
+                      return (
+                        <div key={doc.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
+                          {/* Document Header */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold capitalize">
+                                {doc.documentType.replace(/_/g, ' ')}
+                              </p>
+                              <Badge className={`text-xs px-2 py-0.5 ${statusColor}`}>
+                                {doc.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {doc.fileSize && (
+                                <span className="text-xs text-gray-500">
+                                  {(doc.fileSize / 1024).toFixed(0)} KB
+                                </span>
+                              )}
+                              {doc.uploadedAt && (
+                                <span className="text-xs text-gray-500">
+                                  {new Date(doc.uploadedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Document Preview - Full Width */}
+                          <div className="mb-3">
+                            {isImage ? (
+                              <div 
+                                className="w-full rounded border overflow-hidden bg-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
+                                onClick={() => setViewingDocument({ open: true, document: doc })}
+                              >
+                                <img 
+                                  src={doc.filePath} 
+                                  alt={doc.documentType}
+                                  className="w-full h-auto object-contain max-h-96"
+                                />
+                              </div>
+                            ) : isPDF ? (
+                              <div 
+                                className="w-full h-48 rounded border bg-red-50 flex flex-col items-center justify-center cursor-pointer hover:bg-red-100 transition-colors"
+                                onClick={() => window.open(doc.filePath, '_blank')}
+                              >
+                                <File className="h-16 w-16 text-red-600 mb-2" />
+                                <p className="text-sm text-red-700">Click to view PDF</p>
+                              </div>
+                            ) : (
+                              <div 
+                                className="w-full h-48 rounded border bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => window.open(doc.filePath, '_blank')}
+                              >
+                                <FileText className="h-16 w-16 text-gray-600 mb-2" />
+                                <p className="text-sm text-gray-700">Click to view document</p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="space-y-2">
+                            {/* Download Button - Always Visible */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(doc.filePath, '_blank')}
+                              className="w-full"
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Download Document
+                            </Button>
+                            
+                            {/* Approve/Reject/Request Reupload - Only for Pending */}
+                            {doc.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 text-green-700 border-green-300 hover:bg-green-50"
+                                  onClick={() => {
+                                    updateDocumentStatusMutation.mutate({
+                                      documentId: doc.id,
+                                      status: 'approved',
+                                    });
+                                  }}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 text-red-700 border-red-300 hover:bg-red-50"
+                                  onClick={() => {
+                                    updateDocumentStatusMutation.mutate({
+                                      documentId: doc.id,
+                                      status: 'rejected',
+                                    });
+                                  }}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 text-orange-700 border-orange-300 hover:bg-orange-50"
+                                  onClick={() => {
+                                    const note = window.prompt("Enter note for user about what needs to be fixed:");
+                                    if (note) {
+                                      updateDocumentStatusMutation.mutate({
+                                        documentId: doc.id,
+                                        status: 'needs_reupload',
+                                        adminNote: note,
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <Upload className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Admin Note */}
+                          {doc.adminNote && (
+                            <div className="mt-3 pt-3 border-t">
+                              <p className="text-xs text-gray-600 italic">{doc.adminNote}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500 bg-gray-50 rounded border border-dashed">
+                    <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No documents uploaded yet</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1263,6 +1425,114 @@ export default function AdminDashboard() {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Full-size Document Viewer */}
+      <Dialog open={viewingDocument.open} onOpenChange={(open) => {
+        if (!open) setViewingDocument({ open: false, document: null });
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          {viewingDocument.document && (
+            <div className="flex flex-col h-full">
+              <DialogHeader className="p-6 pb-4">
+                <DialogTitle className="capitalize">
+                  {viewingDocument.document.documentType.replace(/_/g, ' ')}
+                </DialogTitle>
+                <DialogDescription>
+                  Full-size document preview
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="flex-1 overflow-auto p-6 pt-0 bg-gray-50">
+                {viewingDocument.document.mimeType?.startsWith('image/') ? (
+                  <img 
+                    src={viewingDocument.document.filePath} 
+                    alt={viewingDocument.document.documentType}
+                    className="w-full h-auto rounded shadow-lg"
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <File className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                    <p className="text-gray-600 mb-4">Preview not available for this file type</p>
+                    <Button onClick={() => window.open(viewingDocument.document.filePath, '_blank')}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download to View
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="p-6 pt-4 border-t">
+                <div className="flex gap-2 w-full">
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open(viewingDocument.document.filePath, '_blank')}
+                    className="flex-1"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                  {viewingDocument.document.status === 'pending' && (
+                    <>
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-green-700 border-green-300 hover:bg-green-50"
+                        onClick={() => {
+                          updateDocumentStatusMutation.mutate({
+                            documentId: viewingDocument.document.id,
+                            status: 'approved',
+                          });
+                          setViewingDocument({ open: false, document: null });
+                        }}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-red-700 border-red-300 hover:bg-red-50"
+                        onClick={() => {
+                          updateDocumentStatusMutation.mutate({
+                            documentId: viewingDocument.document.id,
+                            status: 'rejected',
+                          });
+                          setViewingDocument({ open: false, document: null });
+                        }}
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Reject
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1 text-orange-700 border-orange-300 hover:bg-orange-50"
+                        onClick={() => {
+                          const note = window.prompt("Enter note for user about what needs to be fixed:");
+                          if (note) {
+                            updateDocumentStatusMutation.mutate({
+                              documentId: viewingDocument.document.id,
+                              status: 'needs_reupload',
+                              adminNote: note,
+                            });
+                            setViewingDocument({ open: false, document: null });
+                          }
+                        }}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Request Reupload
+                      </Button>
+                    </>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setViewingDocument({ open: false, document: null })}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

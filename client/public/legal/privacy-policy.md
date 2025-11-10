@@ -189,11 +189,11 @@ California residents have additional rights under the California Consumer Privac
 - Right to deletion of personal information
 - Right to non-discrimination for exercising privacy rights
 
-To exercise these rights, contact us at privacy@amerilend.com.
+To exercise these rights, contact us at privacy@amerilendloan.com.
 
 ### Nevada Residents
 
-Nevada residents may opt out of the sale of personal information by contacting us at privacy@amerilend.com.
+Nevada residents may opt out of the sale of personal information by contacting us at privacy@amerilendloan.com.
 
 ### Other States
 
@@ -284,7 +284,7 @@ Your continued use of the Services after changes become effective constitutes ac
 If you have questions about this Privacy Policy or wish to exercise your privacy rights, please contact us:
 
 **AmeriLend Privacy Team**  
-Email: privacy@amerilend.com  
+Email: privacy@amerilendloan.com  
 Phone: 1-800-AMERILEND  
 Address: [Your Business Address]
 

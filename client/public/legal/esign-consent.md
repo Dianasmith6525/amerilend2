@@ -90,7 +90,7 @@ We recommend keeping all loan-related documents for at least seven (7) years.
 
 You have the right to receive paper copies of any Communication. To request a paper copy:
 
-- Email us at support@amerilend.com
+- Email us at support@amerilendloan.com
 - Call us at 1-800-AMERILEND
 - Write to us at [Business Address]
 
@@ -100,7 +100,7 @@ We will provide paper copies free of charge, although we reserve the right to ch
 
 You may withdraw your consent to receive electronic Communications at any time by:
 
-- Contacting us at support@amerilend.com
+- Contacting us at support@amerilendloan.com
 - Calling 1-800-AMERILEND
 - Writing to [Business Address]
 
@@ -122,7 +122,7 @@ Withdrawal of consent will be effective after we have had a reasonable period to
 You must keep your email address and other contact information current. To update your information:
 
 - Log in to your account and update your profile
-- Email us at support@amerilend.com
+- Email us at support@amerilendloan.com
 - Call us at 1-800-AMERILEND
 
 You agree to notify us immediately of any change in your email address or other contact information.
@@ -173,7 +173,7 @@ By clicking "I Accept" below, you acknowledge that:
 If you have questions about this E-Sign Consent or need assistance accessing electronic Communications, please contact us:
 
 **AmeriLend**  
-Email: support@amerilend.com  
+Email: support@amerilendloan.com  
 Phone: 1-800-AMERILEND  
 Address: [Your Business Address]
 

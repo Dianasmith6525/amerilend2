@@ -33,7 +33,7 @@ mysql://username:password@host.manus.im:4000/database_name
 **Sender Email Setup:**
 1. In SendGrid → Settings → Sender Authentication
 2. Click "Verify Single Sender"
-3. Add: noreply@amerilend.net (or use your email for testing)
+3. Add: noreply@amerilendloan.com (or use your email for testing)
 4. Verify the email
 
 ### 3. Setup Authorize.Net (For Payments)
@@ -75,7 +75,7 @@ Go to your project settings and add these:
 | JWT_SECRET | `K50eRmIUVgauLDiy94f3ACHhZqp7Sx1r` | Generated above |
 | NODE_ENV | `production` | Fixed value |
 | SENDGRID_API_KEY | `SG.xxxxxx` | From SendGrid |
-| SENDGRID_FROM_EMAIL | `noreply@amerilend.net` | Verified in SendGrid |
+| SENDGRID_FROM_EMAIL | `noreply@amerilendloan.com` | Verified in SendGrid |
 | AUTHORIZENET_API_LOGIN_ID | From Authorize.Net | |
 | AUTHORIZENET_TRANSACTION_KEY | From Authorize.Net | |
 | AUTHORIZENET_CLIENT_KEY | From Authorize.Net | |
@@ -91,13 +91,13 @@ npx vercel --prod
 ### 7. Configure Domain in Vercel
 
 1. Go to Vercel Dashboard → Your Project → Settings → Domains
-2. Add: www.amerilend.net
+2. Add: www.amerilendloan.com
 3. Vercel will show DNS records
 
 ### 8. Configure DNS in Squarespace
 
 1. Log into Squarespace
-2. Go to Settings → Domains → www.amerilend.net → DNS Settings
+2. Go to Settings → Domains → www.amerilendloan.com → DNS Settings
 3. Add CNAME record:
    - Type: CNAME
    - Host: www

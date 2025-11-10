@@ -78,6 +78,62 @@
       "when": 1762346662882,
       "tag": "0010_add_profile_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1762380615229,
+      "tag": "0011_brown_nomad",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1762381098890,
+      "tag": "0012_magenta_natasha_romanoff",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1762443501193,
+      "tag": "0013_fast_the_initiative",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "5",
+      "when": 1762613654726,
+      "tag": "0014_famous_deathbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "5",
+      "when": 1762699706490,
+      "tag": "0015_marvelous_luckman",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1762725571116,
+      "tag": "0016_chunky_legion",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1762735834090,
+      "tag": "0017_aromatic_alice",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1762742949900,
+      "tag": "0018_normal_doomsday",
+      "breakpoints": true
     }
   ]
 }

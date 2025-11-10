@@ -110,16 +110,12 @@ export function CookieConsent() {
                   </p>
                   <p className="text-xs text-gray-500">
                     Read our{" "}
-                    <Link href="/privacy-policy">
-                      <a className="text-[#0033A0] underline hover:text-[#002080]">
-                        Privacy Policy
-                      </a>
+                    <Link href="/privacy-policy" className="text-[#0033A0] underline hover:text-[#002080]">
+                      Privacy Policy
                     </Link>{" "}
                     and{" "}
-                    <Link href="/legal/cookie_policy">
-                      <a className="text-[#0033A0] underline hover:text-[#002080]">
-                        Cookie Policy
-                      </a>
+                    <Link href="/legal/cookie_policy" className="text-[#0033A0] underline hover:text-[#002080]">
+                      Cookie Policy
                     </Link>{" "}
                     to learn more about how we use cookies.
                   </p>

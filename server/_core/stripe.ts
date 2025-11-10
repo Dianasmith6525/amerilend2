@@ -3,13 +3,26 @@
  * Handles credit card payment processing using Stripe
  */
 
+import Stripe from "stripe";
+import { ENV } from "./env";
+
+/**
+ * Initialize Stripe with secret key
+ */
+function getStripeInstance() {
+  if (!ENV.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY environment variable is not set");
+  }
+  return new Stripe(ENV.STRIPE_SECRET_KEY);
+}
+
 /**
  * Stripe configuration from environment
  */
 export function getStripeConfig() {
   return {
-    secretKey: process.env.STRIPE_SECRET_KEY || "",
-    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || "",
+    secretKey: ENV.STRIPE_SECRET_KEY,
+    publishableKey: ENV.STRIPE_PUBLISHABLE_KEY,
   };
 }
 
@@ -26,7 +39,7 @@ export async function createStripePaymentIntent(
 ) {
   const config = getStripeConfig();
 
-  if (!config.secretKey) {
+  if (!config.secretKey || !config.publishableKey) {
     return {
       success: false,
       error: "Stripe configuration missing",
@@ -34,26 +47,22 @@ export async function createStripePaymentIntent(
   }
 
   try {
-    // For testing without Stripe installed, return mock success
-    // In production, you'd use: import Stripe from 'stripe'
+    const stripe = getStripeInstance();
     
-    // Mock implementation for demo purposes
-    if (process.env.STRIPE_MODE === "mock") {
-      return {
-        success: true,
-        clientSecret: `pi_test_${Date.now()}`,
-        paymentIntentId: `pi_${Date.now()}`,
-      };
-    }
-
-    // Real Stripe implementation would go here
-    // const stripe = new Stripe(config.secretKey);
-    // const paymentIntent = await stripe.paymentIntents.create({...})
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount,
+      currency: "usd",
+      description,
+      ...(customerId && { customer: customerId }),
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
 
     return {
       success: true,
-      clientSecret: `pi_test_${Date.now()}`,
-      paymentIntentId: `pi_${Date.now()}`,
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
     };
   } catch (error) {
     console.error("Stripe error:", error);
@@ -78,16 +87,60 @@ export async function getStripePaymentIntent(paymentIntentId: string) {
   }
 
   try {
-    // Mock implementation for demo
+    const stripe = getStripeInstance();
+    
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
     return {
       success: true,
-      status: "succeeded",
-      amount: 575,
+      status: paymentIntent.status,
+      amount: paymentIntent.amount,
+      paymentIntentId: paymentIntent.id,
     };
   } catch (error) {
+    console.error("Stripe retrieve error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Confirm payment intent (called after client-side payment confirmation)
+ */
+export async function confirmStripePayment(paymentIntentId: string) {
+  const config = getStripeConfig();
+
+  if (!config.secretKey) {
+    return {
+      success: false,
+      error: "Stripe configuration missing",
+    };
+  }
+
+  try {
+    const stripe = getStripeInstance();
+    
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    
+    if (paymentIntent.status === "succeeded") {
+      return {
+        success: true,
+        status: "succeeded",
+        amount: paymentIntent.amount,
+      };
+    }
+    
+    return {
+      success: false,
+      error: `Payment status: ${paymentIntent.status}`,
+    };
+  } catch (error) {
+    console.error("Stripe confirmation error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Payment confirmation failed",
     };
   }
 }

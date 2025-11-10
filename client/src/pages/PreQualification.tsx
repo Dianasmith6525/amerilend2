@@ -7,17 +7,27 @@ import { CheckCircle2, XCircle, AlertCircle, ArrowRight, ArrowLeft, Shield, Phon
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import confetti from "canvas-confetti";
+import SEO from "@/components/SEO";
+
+type LoanOffer = {
+  loanAmount: number;
+  processingFee: number;
+  repaymentTerm: number; // in months
+  interestRate?: number; // optional APR
+  monthlyPayment: number;
+  totalRepayment: number;
+};
 
 type PreQualificationResult = {
   qualified: boolean;
-  maxLoanAmount: number;
-  estimatedAPR: number;
+  offers: LoanOffer[];
   message: string;
 };
 
 export default function PreQualification() {
   const [step, setStep] = useState(1);
   const [result, setResult] = useState<PreQualificationResult | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<LoanOffer | null>(null);
   const [showApproval, setShowApproval] = useState(false);
   const [formData, setFormData] = useState({
     annualIncome: "",
@@ -106,8 +116,7 @@ export default function PreQualification() {
     if (!hasIncome) {
       return {
         qualified: false,
-        maxLoanAmount: 0,
-        estimatedAPR: 0,
+        offers: [],
         message: "Minimum annual income of $12,000 required"
       };
     }
@@ -115,8 +124,7 @@ export default function PreQualification() {
     if (!isEmployed) {
       return {
         qualified: false,
-        maxLoanAmount: 0,
-        estimatedAPR: 0,
+        offers: [],
         message: "Employment required for loan qualification"
       };
     }
@@ -124,44 +132,91 @@ export default function PreQualification() {
     if (!hasAcceptableDebt) {
       return {
         qualified: false,
-        maxLoanAmount: 0,
-        estimatedAPR: 0,
+        offers: [],
         message: "Debt-to-income ratio too high. Consider reducing existing debts."
       };
     }
 
-    if (!reasonableAmount) {
-      return {
-        qualified: true,
-        maxLoanAmount: Math.floor(income * 0.5),
-        estimatedAPR: creditScore >= 700 ? 29 : creditScore >= 600 ? 79 : 149,
-        message: `You may qualify for up to $${Math.floor(income * 0.5).toLocaleString()}`
-      };
+    // Generate 1-3 loan offers based on credit score and income
+    const offers: LoanOffer[] = [];
+    const processingFeeRate = 0.045; // 4.5%
+    
+    // Helper function to calculate monthly payment
+    const calculateMonthlyPayment = (principal: number, rate: number, months: number): number => {
+      if (rate === 0) return principal / months;
+      const monthlyRate = rate / 100 / 12;
+      return principal * (monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+    };
+
+    // Offer 1: Requested amount (if reasonable)
+    if (reasonableAmount) {
+      const term = creditScore >= 700 ? 24 : creditScore >= 650 ? 18 : 12;
+      const rate = creditScore >= 700 ? 12 : creditScore >= 650 ? 18 : 24;
+      const processingFee = requestedAmount * processingFeeRate;
+      const monthlyPayment = calculateMonthlyPayment(requestedAmount, rate, term);
+      const totalRepayment = (monthlyPayment * term) + processingFee;
+
+      offers.push({
+        loanAmount: requestedAmount,
+        processingFee: processingFee,
+        repaymentTerm: term,
+        interestRate: rate,
+        monthlyPayment: monthlyPayment,
+        totalRepayment: totalRepayment
+      });
     }
 
-    // Calculate max loan based on credit score and income
-    let maxLoan = income * 0.5;
-    let apr = 99;
+    // Offer 2: 75% of requested amount (better terms)
+    const moderateAmount = requestedAmount * 0.75;
+    if (moderateAmount >= 1000) {
+      const term = creditScore >= 700 ? 18 : creditScore >= 650 ? 15 : 12;
+      const rate = creditScore >= 700 ? 10 : creditScore >= 650 ? 15 : 20;
+      const processingFee = moderateAmount * processingFeeRate;
+      const monthlyPayment = calculateMonthlyPayment(moderateAmount, rate, term);
+      const totalRepayment = (monthlyPayment * term) + processingFee;
 
-    if (creditScore >= 700) {
-      apr = 29;
-      maxLoan = income * 0.5;
-    } else if (creditScore >= 650) {
-      apr = 49;
-      maxLoan = income * 0.4;
-    } else if (creditScore >= 600) {
-      apr = 79;
-      maxLoan = income * 0.35;
-    } else {
-      apr = 149;
-      maxLoan = income * 0.25;
+      offers.push({
+        loanAmount: moderateAmount,
+        processingFee: processingFee,
+        repaymentTerm: term,
+        interestRate: rate,
+        monthlyPayment: monthlyPayment,
+        totalRepayment: totalRepayment
+      });
+    }
+
+    // Offer 3: 50% of requested amount (best terms)
+    const conservativeAmount = requestedAmount * 0.5;
+    if (conservativeAmount >= 1000) {
+      const term = creditScore >= 700 ? 12 : creditScore >= 650 ? 12 : 9;
+      const rate = creditScore >= 700 ? 8 : creditScore >= 650 ? 12 : 16;
+      const processingFee = conservativeAmount * processingFeeRate;
+      const monthlyPayment = calculateMonthlyPayment(conservativeAmount, rate, term);
+      const totalRepayment = (monthlyPayment * term) + processingFee;
+
+      offers.push({
+        loanAmount: conservativeAmount,
+        processingFee: processingFee,
+        repaymentTerm: term,
+        interestRate: rate,
+        monthlyPayment: monthlyPayment,
+        totalRepayment: totalRepayment
+      });
+    }
+
+    // If no offers generated, return not qualified
+    if (offers.length === 0) {
+      return {
+        qualified: false,
+        offers: [],
+        message: "Unable to generate loan offers at this time. Please try a different amount."
+      };
     }
 
     return {
       qualified: true,
-      maxLoanAmount: Math.floor(maxLoan),
-      estimatedAPR: apr,
-      message: `Great news! You may qualify for a loan up to $${Math.floor(maxLoan).toLocaleString()}`
+      offers: offers,
+      message: `Great news! We have ${offers.length} personalized loan offer${offers.length > 1 ? 's' : ''} for you!`
     };
   };
 
@@ -187,6 +242,12 @@ export default function PreQualification() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
+      <SEO
+        title="Check Your Pre-Qualification"
+        description="See if you pre-qualify for a personal loan in minutes. Get instant loan offers from $500 to $100,000 with no impact to your credit score. Quick and secure pre-qualification process."
+        ogType="website"
+      />
+      
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
         <div className="container mx-auto px-4">
@@ -218,7 +279,7 @@ export default function PreQualification() {
 
       {/* Hero Section */}
       <section className="py-12 bg-gradient-to-r from-[#0033A0] to-[#0055D4] text-white">
-        <div className="container mx-auto px-4 text-center max-w-3xl">
+        <div className="container mx-auto px-4 text-center max-w-5xl">
           <div className="inline-flex items-center gap-2 bg-white/20 px-4 py-2 rounded-full mb-6">
             <Shield className="w-5 h-5" />
             <span className="text-sm font-semibold">No Impact on Credit Score</span>
@@ -229,7 +290,7 @@ export default function PreQualification() {
           <p className="text-xl text-white/90 mb-2">
             See your potential loan amount in just 3 questions
           </p>
-          <p className="text-white/75">
+          <p className="text-white/75 text-base md:text-lg">
             ✓ No hard credit check  ✓ Won't affect your score  ✓ Instant results
           </p>
         </div>
@@ -237,7 +298,7 @@ export default function PreQualification() {
 
       {/* Main Content */}
       <section className="flex-1 py-12">
-        <div className="container mx-auto px-4 max-w-2xl">
+        <div className="container mx-auto px-4 max-w-4xl">
           {/* Step 1: Income & Employment */}
           {step === 1 && (
             <Card className="shadow-lg">
@@ -435,9 +496,9 @@ export default function PreQualification() {
             <Card className="shadow-lg overflow-hidden">
               <CardContent className="p-8">
                 {result.qualified ? (
-                  <div className="text-center">
+                  <div>
                     {/* Animated Approval Icon */}
-                    <div className="relative mb-6">
+                    <div className="relative mb-6 text-center">
                       <div className={`w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto shadow-2xl ${showApproval ? 'animate-bounce-in' : ''}`}>
                         <CheckCircle2 className="w-14 h-14 text-white animate-pulse" />
                       </div>
@@ -446,15 +507,15 @@ export default function PreQualification() {
                         <Sparkles className="w-6 h-6 text-yellow-400 animate-ping" />
                       </div>
                       <div className="absolute bottom-0 right-1/3">
-                        <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" style={{ animationDelay: '0.2s' }} />
+                        <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
                       </div>
                       <div className="absolute bottom-2 left-1/3">
-                        <Sparkles className="w-4 h-4 text-yellow-500 animate-ping" style={{ animationDelay: '0.4s' }} />
+                        <Sparkles className="w-4 h-4 text-yellow-500 animate-ping" />
                       </div>
                     </div>
 
                     {/* Animated Title */}
-                    <div className={`mb-6 ${showApproval ? 'animate-slide-up' : ''}`}>
+                    <div className={`mb-8 text-center ${showApproval ? 'animate-slide-up' : ''}`}>
                       <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-full mb-4 animate-pulse">
                         <PartyPopper className="w-5 h-5" />
                         <span className="font-semibold">You're Pre-Qualified!</span>
@@ -462,46 +523,92 @@ export default function PreQualification() {
                       <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-green-800 mb-3 animate-fade-in">
                         Congratulations!
                       </h2>
-                      <p className="text-xl md:text-2xl text-gray-700 font-medium animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                        {result.message}
+                      <p className="text-xl md:text-2xl text-gray-700 font-medium animate-fade-in">
+                        We have {result.offers.length} personalized loan {result.offers.length === 1 ? 'offer' : 'offers'} for you!
                       </p>
                     </div>
 
-                    {/* Animated Loan Details */}
-                    <div className={`grid md:grid-cols-2 gap-6 max-w-lg mx-auto mb-8 ${showApproval ? 'animate-slide-up' : ''}`} style={{ animationDelay: '0.3s' }}>
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200 transform hover:scale-105 transition-transform duration-300 shadow-lg">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <Sparkles className="w-5 h-5 text-blue-600" />
-                          <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Potential Loan Amount</p>
+                    {/* Loan Offers Grid */}
+                    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 ${showApproval ? 'animate-slide-up' : ''}`}>
+                      {result.offers.map((offer, index) => (
+                        <div
+                          key={index}
+                          onClick={() => setSelectedOffer(offer)}
+                          className={`relative bg-white rounded-xl p-6 border-2 cursor-pointer transform hover:scale-105 transition-all duration-300 shadow-lg ${
+                            selectedOffer === offer
+                              ? 'border-[#FFA500] ring-4 ring-[#FFA500] ring-opacity-30'
+                              : 'border-gray-200 hover:border-[#0033A0]'
+                          }`}
+                        >
+                          {/* Best Deal Badge */}
+                          {index === 0 && (
+                            <div className="absolute -top-3 -right-3 bg-gradient-to-r from-[#FFA500] to-[#FF8C00] text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg transform rotate-12">
+                              Best Deal
+                            </div>
+                          )}
+                          
+                          {/* Selection Indicator */}
+                          <div className={`absolute top-4 right-4 w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                            selectedOffer === offer
+                              ? 'bg-[#FFA500] border-[#FFA500]'
+                              : 'border-gray-300'
+                          }`}>
+                            {selectedOffer === offer && (
+                              <CheckCircle2 className="w-4 h-4 text-white" />
+                            )}
+                          </div>
+
+                          {/* Loan Amount */}
+                          <div className="text-center mb-4">
+                            <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-2">Loan Amount</p>
+                            <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#0033A0] to-blue-600">
+                              ${offer.loanAmount.toLocaleString()}
+                            </p>
+                          </div>
+
+                          {/* Loan Details */}
+                          <div className="space-y-3 text-left">
+                            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                              <span className="text-sm text-gray-600">Processing Fee (4.5%)</span>
+                              <span className="font-semibold text-gray-900">${offer.processingFee.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                              <span className="text-sm text-gray-600">Repayment Term</span>
+                              <span className="font-semibold text-gray-900">{offer.repaymentTerm} months</span>
+                            </div>
+                            {offer.interestRate !== undefined && (
+                              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                                <span className="text-sm text-gray-600">Interest Rate (APR)</span>
+                                <span className="font-semibold text-gray-900">{offer.interestRate}%</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                              <span className="text-sm text-gray-600">Monthly Payment</span>
+                              <span className="font-semibold text-[#FFA500]">${offer.monthlyPayment.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center py-2 bg-blue-50 rounded-lg px-3">
+                              <span className="text-sm font-semibold text-blue-900">Total Repayment</span>
+                              <span className="font-bold text-blue-900">${offer.totalRepayment.toLocaleString()}</span>
+                            </div>
+                          </div>
                         </div>
-                        <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#0033A0] to-blue-600">
-                          ${result.maxLoanAmount.toLocaleString()}
-                        </p>
-                        <div className="mt-2 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent rounded-full animate-pulse"></div>
-                      </div>
-                      <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200 transform hover:scale-105 transition-transform duration-300 shadow-lg">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <Sparkles className="w-5 h-5 text-orange-600" />
-                          <p className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Estimated APR</p>
-                        </div>
-                        <p className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FFA500] to-orange-600">
-                          {result.estimatedAPR}%
-                        </p>
-                        <div className="mt-2 h-1 bg-gradient-to-r from-transparent via-orange-400 to-transparent rounded-full animate-pulse"></div>
-                      </div>
+                      ))}
                     </div>
 
-                    <div className={`bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 mb-8 text-left ${showApproval ? 'animate-fade-in' : ''}`} style={{ animationDelay: '0.5s' }}>
+                    <div className={`bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4 mb-8 text-left ${showApproval ? 'animate-fade-in' : ''}`}>
                       <p className="text-sm text-gray-700">
-                        <strong className="text-gray-900">Important:</strong> This is a pre-qualification estimate only. Your actual loan amount and APR will be determined after a full application review, which includes a hard credit check.
+                        <strong className="text-gray-900">Important:</strong> This is a pre-qualification estimate only. Your actual loan amount and terms will be determined after a full application review, which includes a hard credit check. Select an offer above to continue.
                       </p>
                     </div>
 
-                    <div className={`flex flex-col sm:flex-row gap-4 justify-center ${showApproval ? 'animate-slide-up' : ''}`} style={{ animationDelay: '0.6s' }}>
-                      <Link href="/apply">
-                        <Button className="bg-gradient-to-r from-[#FFA500] to-[#FF8C00] hover:from-[#FF8C00] hover:to-[#FF7700] text-white px-10 py-4 text-lg w-full sm:w-auto shadow-xl transform hover:scale-105 transition-all duration-300 font-bold">
+                    <div className={`flex flex-col sm:flex-row gap-4 justify-center ${showApproval ? 'animate-slide-up' : ''}`}>
+                      <Link href="/signup">
+                        <Button 
+                          className="bg-gradient-to-r from-[#FFA500] to-[#FF8C00] hover:from-[#FF8C00] hover:to-[#FF7700] text-white px-10 py-4 text-lg w-full sm:w-auto shadow-xl transform hover:scale-105 transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={!selectedOffer}
+                        >
                           <PartyPopper className="w-5 h-5 mr-2" />
-                          Apply Now
+                          Continue to Application
                           <ArrowRight className="w-5 h-5 ml-2" />
                         </Button>
                       </Link>
@@ -568,7 +675,7 @@ export default function PreQualification() {
           )}
 
           {/* Disclaimer */}
-          <div className="mt-8 text-center text-sm text-gray-500 max-w-2xl mx-auto">
+          <div className="mt-8 text-center text-sm text-gray-500 max-w-4xl mx-auto">
             <p>
               Pre-qualification does not guarantee loan approval. Actual loan terms are subject to credit approval and may vary based on applicant qualifications, loan amount, loan term, credit usage and history, and other factors. Rates shown are illustrative and may not be available in all states.
             </p>

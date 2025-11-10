@@ -187,17 +187,24 @@ export async function sendEmail(payload: {
   subject: string;
   html: string;
   text?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer;
+    contentType: string;
+  }>;
 }): Promise<boolean> {
-  const { to, subject, html, text } = payload;
+  const { to, subject, html, text, attachments } = payload;
 
   if (!ENV.SENDGRID_API_KEY) {
+    console.warn(`[Email] ⚠️  SENDGRID_API_KEY not configured`);
     console.log(`[Email] Would send to ${to}: ${subject}`);
-    console.log("[Email] SendGrid not configured - email logged to console");
-    console.log("[Email] HTML Content:", html);
+    console.log("[Email] Email content logged to console (SendGrid not configured):");
+    console.log("[Email] HTML:", html);
     return false;
   }
 
   if (!ENV.SENDGRID_FROM_EMAIL) {
+    console.error("[Email] ❌ SendGrid sender email is not configured");
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "SendGrid sender email is not configured.",
@@ -205,7 +212,7 @@ export async function sendEmail(payload: {
   }
 
   try {
-    const msg = {
+    const msg: any = {
       to,
       from: {
         name: "AmeriLend",
@@ -217,16 +224,257 @@ export async function sendEmail(payload: {
       text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML tags for text version
     };
 
+    // Add attachments if provided
+    if (attachments && attachments.length > 0) {
+      msg.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content.toString('base64'),
+        type: att.contentType,
+        disposition: 'attachment',
+      }));
+    }
+
+    console.log(`[Email] Attempting to send email to ${to}...`);
     const result = await sgMail.send(msg);
-    console.log(`[Email] Sent to ${to} - Subject: ${subject}`);
-    console.log(`[Email] SendGrid response:`, JSON.stringify(result[0]?.statusCode));
+    console.log(`[Email] ✅ Successfully sent to ${to} - Subject: ${subject}`);
+    console.log(`[Email] Response status:`, result[0]?.statusCode);
     return true;
-  } catch (error) {
-    console.error("[Email] Failed to send:", error);
+  } catch (error: any) {
+    console.error("[Email] ❌ Failed to send:", error.message || error);
+    console.error("[Email] Error details:", error);
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Failed to send email. Please try again.",
     });
+  }
+}
+
+/**
+ * Send welcome email to newly registered user
+ */
+export async function sendWelcomeEmail(email: string, userName?: string): Promise<boolean> {
+  const userDisplayName = userName || email.split('@')[0];
+
+  if (!ENV.SENDGRID_API_KEY) {
+    console.log(`[Welcome Email] Would send to ${email} for user: ${userDisplayName}`);
+    return false;
+  }
+
+  if (!ENV.SENDGRID_FROM_EMAIL) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "SendGrid sender email is not configured.",
+    });
+  }
+
+  try {
+    await sendEmail({
+      to: email,
+      subject: "Welcome to AmeriLend!",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
+          <table role="presentation" style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <tr>
+                    <td style="padding: 40px 30px; background: linear-gradient(135deg, #0033A0 0%, #002080 100%); border-radius: 8px 8px 0 0;">
+                      <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 28px;">Welcome to AmeriLend</h1>
+                      <p style="color: #ffffff; margin: 0; font-size: 16px;">Your Trusted Lending Partner</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <h2 style="color: #0033A0; margin: 0 0 20px 0; font-size: 24px;">Hi ${userDisplayName}!</h2>
+                      
+                      <p style="color: #333333; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                        Thank you for creating your AmeriLend account! We're excited to help you find the perfect loan solution.
+                      </p>
+                      
+                      <p style="color: #333333; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                        Your account is now active and ready to use. Here's what you can do next:
+                      </p>
+                      
+                      <ul style="color: #333333; font-size: 16px; line-height: 24px; margin: 0 0 20px 0; padding-left: 20px;">
+                        <li style="margin-bottom: 10px;"><strong>Browse Loan Options</strong> - Explore our various loan products tailored to your needs</li>
+                        <li style="margin-bottom: 10px;"><strong>Complete Your Profile</strong> - Add more information to get personalized loan recommendations</li>
+                        <li style="margin-bottom: 10px;"><strong>Apply for a Loan</strong> - Start your application with just a few clicks</li>
+                        <li style="margin-bottom: 10px;"><strong>Track Your Application</strong> - Monitor your application status in real-time</li>
+                      </ul>
+                      
+                      <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #0033A0; margin: 30px 0; border-radius: 4px;">
+                        <p style="color: #333333; font-size: 14px; line-height: 20px; margin: 0;">
+                          <strong>💡 Tip:</strong> Keep your account information up to date to ensure faster loan approvals and better rates.
+                        </p>
+                      </div>
+                      
+                      <p style="color: #666666; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                        If you have any questions or need assistance, our support team is here to help. Contact us anytime!
+                      </p>
+                      
+                      <hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0;">
+                      
+                      <p style="color: #999999; font-size: 12px; line-height: 18px; margin: 0;">
+                        <strong>Security Note:</strong> We'll never ask for your password via email. Keep your login credentials safe and secure.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 20px 30px; background-color: #f8f9fa; border-top: 1px solid #eeeeee;">
+                      <p style="color: #999999; font-size: 11px; line-height: 16px; margin: 0;">
+                        AmeriLend - Your Trusted Lending Partner<br>
+                        © 2025 AmeriLend, LLC. All Rights Reserved<br>
+                        This is an automated message, please do not reply to this email.<br>
+                        Questions? Call us at (945) 212-1609 or visit our website
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+      text: `Welcome to AmeriLend!\n\nHi ${userDisplayName},\n\nThank you for creating your AmeriLend account! Your account is now active and ready to use.\n\nYou can now:\n- Browse loan options\n- Complete your profile\n- Apply for a loan\n- Track your application\n\nIf you have any questions, contact our support team.\n\nSecurity Note: We'll never ask for your password via email. Keep your login credentials safe!\n\nBest regards,\nThe AmeriLend Team`,
+    });
+
+    console.log(`[Welcome Email] ✅ Welcome email sent to ${email}`);
+    return true;
+  } catch (error: any) {
+    console.error("[Welcome Email] Failed to send welcome email:", error);
+    // Don't throw - continue with signup even if welcome email fails
+    return false;
+  }
+}
+
+/**
+ * Send email verification link + OTP code to user
+ */
+export async function sendEmailVerification(
+  email: string,
+  verificationToken: string,
+  otpCode: string,
+  userName?: string
+): Promise<boolean> {
+  const userDisplayName = userName || email.split('@')[0];
+
+  if (!ENV.SENDGRID_API_KEY) {
+    console.log(`[Email Verification] Would send to ${email} with token: ${verificationToken} and code: ${otpCode}`);
+    return false;
+  }
+
+  if (!ENV.SENDGRID_FROM_EMAIL) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "SendGrid sender email is not configured.",
+    });
+  }
+
+  try {
+    const verificationLink = `${process.env.VITE_APP_URL || 'http://localhost:5173'}/verify-email?token=${verificationToken}`;
+
+    await sendEmail({
+      to: email,
+      subject: "Verify Your AmeriLend Email Address",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4;">
+          <table role="presentation" style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                  <tr>
+                    <td style="padding: 40px 30px; background: linear-gradient(135deg, #0033A0 0%, #002080 100%); border-radius: 8px 8px 0 0;">
+                      <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 28px;">Verify Your Email</h1>
+                      <p style="color: #ffffff; margin: 0; font-size: 16px;">Complete your AmeriLend account setup</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <h2 style="color: #0033A0; margin: 0 0 20px 0; font-size: 24px;">Hi ${userDisplayName}!</h2>
+                      
+                      <p style="color: #333333; font-size: 16px; line-height: 24px; margin: 0 0 20px 0;">
+                        Thank you for creating your AmeriLend account. To complete your registration, please verify your email address.
+                      </p>
+                      
+                      <p style="color: #333333; font-size: 16px; line-height: 24px; margin: 0 0 30px 0;">
+                        Choose one of the following verification methods:
+                      </p>
+                      
+                      <div style="background-color: #f0f7ff; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
+                        <h3 style="color: #0033A0; margin: 0 0 15px 0; font-size: 16px;">Option 1: Click Verification Link</h3>
+                        <p style="color: #666666; font-size: 14px; line-height: 20px; margin: 0 0 15px 0;">
+                          Click the button below to instantly verify your email:
+                        </p>
+                        <div style="text-align: center; margin: 20px 0;">
+                          <a href="${verificationLink}" style="display: inline-block; padding: 12px 30px; background-color: #0033A0; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                            Verify Email Now
+                          </a>
+                        </div>
+                        <p style="color: #999999; font-size: 12px; line-height: 18px; margin: 0; word-break: break-all;">
+                          Or copy this link: ${verificationLink}
+                        </p>
+                      </div>
+                      
+                      <div style="background-color: #fff8f0; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
+                        <h3 style="color: #0033A0; margin: 0 0 15px 0; font-size: 16px;">Option 2: Enter Verification Code</h3>
+                        <p style="color: #666666; font-size: 14px; line-height: 20px; margin: 0 0 15px 0;">
+                          If you prefer, enter this code in the verification form:
+                        </p>
+                        <div style="background-color: #ffffff; border: 2px solid #0033A0; padding: 20px; text-align: center; border-radius: 6px; margin: 15px 0;">
+                          <p style="color: #0033A0; font-size: 24px; font-weight: bold; margin: 0; letter-spacing: 4px; font-family: 'Courier New', monospace;">
+                            ${otpCode}
+                          </p>
+                        </div>
+                        <p style="color: #666666; font-size: 14px; line-height: 20px; margin: 10px 0 0 0;">
+                          This code will expire in 30 minutes.
+                        </p>
+                      </div>
+                      
+                      <hr style="border: none; border-top: 1px solid #eeeeee; margin: 30px 0;">
+                      
+                      <p style="color: #999999; font-size: 12px; line-height: 18px; margin: 0;">
+                        <strong>Security Note:</strong> We'll never ask for your password via email. If you didn't create this account, please contact us immediately.
+                      </p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 20px 30px; background-color: #f8f9fa; border-top: 1px solid #eeeeee;">
+                      <p style="color: #999999; font-size: 11px; line-height: 16px; margin: 0;">
+                        AmeriLend - Your Trusted Lending Partner<br>
+                        © 2025 AmeriLend, LLC. All Rights Reserved<br>
+                        This is an automated message, please do not reply to this email.<br>
+                        Questions? Call us at (945) 212-1609 or visit our website
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+      text: `Verify Your Email\n\nHi ${userDisplayName},\n\nThank you for creating your AmeriLend account. To complete your registration, please verify your email address.\n\nOption 1: Click this link to verify: ${verificationLink}\n\nOption 2: Enter this code: ${otpCode}\n\nThis code will expire in 30 minutes.\n\nIf you didn't create this account, please contact us immediately.\n\nBest regards,\nThe AmeriLend Team`,
+    });
+
+    console.log(`[Email Verification] ✅ Verification email sent to ${email}`);
+    return true;
+  } catch (error: any) {
+    console.error("[Email Verification] Failed to send verification email:", error);
+    return false;
   }
 }
 
@@ -335,7 +583,7 @@ export async function sendLoanStatusSMS(
     under_review: `Your AmeriLend loan application #${applicationId} is currently being reviewed by our team. We'll update you soon.`,
     approved: `Great news! Your AmeriLend loan application #${applicationId} has been APPROVED! ${additionalInfo || 'Log in to complete the next steps.'}`,
     rejected: `We're unable to approve your loan application #${applicationId} at this time. ${additionalInfo || 'Please call (945) 212-1609 for more information.'}`,
-    fee_pending: `Your loan #${applicationId} is approved! Please pay the processing fee to proceed with disbursement. Log in at amerilend.com`,
+    fee_pending: `Your loan #${applicationId} is approved! Please pay the processing fee to proceed with disbursement. Log in at amerilendloan.com`,
     fee_paid: `Payment received for loan #${applicationId}! Your funds will be disbursed within 1-2 business days.`,
     disbursed: `Your loan #${applicationId} has been funded! Funds should appear in your account within 24 hours. Thank you for choosing AmeriLend!`,
   };
@@ -519,7 +767,7 @@ export async function sendLoanStatusEmail(
                       <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                         <tr>
                           <td align="center">
-                            <a href="https://amerilend.com/dashboard" style="display: inline-block; padding: 15px 40px; background-color: ${config.color}; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">
+                            <a href="https://amerilendloan.com/dashboard" style="display: inline-block; padding: 15px 40px; background-color: ${config.color}; color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">
                               View Application
                             </a>
                           </td>

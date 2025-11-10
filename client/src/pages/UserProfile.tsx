@@ -26,9 +26,9 @@ import {
   FileText,
   DollarSign,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FullPageLoader } from "@/components/ui/loader";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 
 export default function UserProfile() {
@@ -36,6 +36,8 @@ export default function UserProfile() {
     redirectOnUnauthenticated: true,
     redirectPath: "/login"
   });
+  const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
 
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -64,6 +66,34 @@ export default function UserProfile() {
     bankruptcyDate: user?.bankruptcyDate || "",
   });
 
+  // Sync form data when user data loads
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        street: user.street || "",
+        city: user.city || "",
+        state: user.state || "",
+        zipCode: user.zipCode || "",
+        middleInitial: user.middleInitial || "",
+        dateOfBirth: user.dateOfBirth || "",
+        ssn: user.ssn || "",
+        idType: user.idType || "",
+        idNumber: user.idNumber || "",
+        maritalStatus: user.maritalStatus || "",
+        dependents: user.dependents || 0,
+        citizenshipStatus: user.citizenshipStatus || "",
+        employmentStatus: user.employmentStatus || "",
+        employer: user.employer || "",
+        monthlyIncome: user.monthlyIncome || 0,
+        priorBankruptcy: user.priorBankruptcy || 0,
+        bankruptcyDate: user.bankruptcyDate || "",
+      });
+    }
+  }, [user]);
+
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -76,7 +106,8 @@ export default function UserProfile() {
   });
 
   const updateProfileMutation = trpc.users.updateProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
+      await utils.auth.me.invalidate();
       toast.success("Profile updated successfully!");
       setIsEditing(false);
     },
@@ -122,29 +153,33 @@ export default function UserProfile() {
     enabled: isAuthenticated,
   });
 
+  const { data: loans, isLoading: loansLoading } = trpc.loans.myApplications.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
   const handleSaveProfile = async () => {
     try {
       await updateProfileMutation.mutateAsync({
-        name: formData.name,
-        phone: formData.phone,
-        street: formData.street,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        // NEW FIELDS:
-        middleInitial: formData.middleInitial,
-        dateOfBirth: formData.dateOfBirth,
-        ssn: formData.ssn,
-        idType: formData.idType,
-        idNumber: formData.idNumber,
-        maritalStatus: formData.maritalStatus,
-        dependents: formData.dependents,
-        citizenshipStatus: formData.citizenshipStatus,
-        employmentStatus: formData.employmentStatus,
-        employer: formData.employer,
-        monthlyIncome: formData.monthlyIncome,
-        priorBankruptcy: formData.priorBankruptcy,
-        bankruptcyDate: formData.bankruptcyDate,
+        name: formData.name || undefined,
+        phone: formData.phone || undefined,
+        street: formData.street || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        zipCode: formData.zipCode || undefined,
+        // NEW FIELDS: Only send non-empty values
+        middleInitial: formData.middleInitial || undefined,
+        dateOfBirth: formData.dateOfBirth || undefined,
+        ssn: formData.ssn || undefined,
+        idType: (formData.idType as "drivers_license" | "passport" | "state_id" | "military_id") || undefined,
+        idNumber: formData.idNumber || undefined,
+        maritalStatus: (formData.maritalStatus as "single" | "married" | "divorced" | "widowed" | "domestic_partnership") || undefined,
+        dependents: formData.dependents ? formData.dependents : undefined,
+        citizenshipStatus: (formData.citizenshipStatus as "us_citizen" | "permanent_resident") || undefined,
+        employmentStatus: (formData.employmentStatus as "employed" | "self_employed" | "unemployed" | "retired") || undefined,
+        employer: formData.employer || undefined,
+        monthlyIncome: formData.monthlyIncome ? formData.monthlyIncome : undefined,
+        priorBankruptcy: formData.priorBankruptcy !== undefined && formData.priorBankruptcy > 0 ? formData.priorBankruptcy : undefined,
+        bankruptcyDate: formData.bankruptcyDate || undefined,
       });
     } catch (error) {
       console.error("Profile update error:", error);
@@ -212,17 +247,15 @@ export default function UserProfile() {
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="max-w-md w-full mx-4">
+        <Card className="w-full max-w-lg mx-4">
           <CardContent className="p-8 text-center">
             <AlertCircle className="w-12 h-12 text-[#0033A0] mx-auto mb-4" />
             <h2 className="text-xl font-bold text-[#0033A0] mb-2">Sign In Required</h2>
             <p className="text-gray-600 mb-6">Please sign in to view your profile.</p>
-            <Link href="/login">
-              <a className="inline-block w-full">
-                <Button className="w-full bg-[#FFA500] hover:bg-[#FF8C00] text-white">
-                  Sign In
-                </Button>
-              </a>
+            <Link href="/login" className="inline-block w-full">
+              <Button className="w-full bg-[#FFA500] hover:bg-[#FF8C00] text-white">
+                Sign In
+              </Button>
             </Link>
           </CardContent>
         </Card>
@@ -242,25 +275,19 @@ export default function UserProfile() {
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/">
-                <a className="text-2xl font-bold">
-                  <span className="text-[#0033A0]">Ameri</span>
-                  <span className="text-[#D4AF37]">Lend</span>
-                  <sup className="text-xs text-[#0033A0]">®</sup>
-                </a>
+              <Link href="/" className="text-2xl font-bold">
+                <span className="text-[#0033A0]">Ameri</span>
+                <span className="text-[#D4AF37]">Lend</span>
+                <sup className="text-xs text-[#0033A0]">®</sup>
               </Link>
             </div>
 
             <nav className="flex items-center gap-6">
-              <Link href="/dashboard">
-                <a className="text-gray-700 hover:text-[#0033A0] transition-colors">
-                  Dashboard
-                </a>
+              <Link href="/dashboard" className="text-gray-700 hover:text-[#0033A0] transition-colors">
+                Dashboard
               </Link>
-              <Link href="/apply">
-                <a className="text-gray-700 hover:text-[#0033A0] transition-colors">
-                  Apply
-                </a>
+              <Link href="/apply" className="text-gray-700 hover:text-[#0033A0] transition-colors">
+                Apply
               </Link>
               <Button
                 variant="outline"
@@ -468,25 +495,6 @@ export default function UserProfile() {
                       />
                     </div>
                   </div>
-
-                  <div className="flex gap-4 pt-4">
-                    <Button
-                      onClick={handleSaveProfile}
-                      disabled={updateProfileMutation.isPending}
-                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Save className="w-4 h-4" />
-                      {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                    <Button
-                      onClick={() => setIsEditing(false)}
-                      variant="outline"
-                      className="flex items-center gap-2"
-                    >
-                      <X className="w-4 h-4" />
-                      Cancel
-                    </Button>
-                  </div>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -592,7 +600,7 @@ export default function UserProfile() {
                       onChange={(e) => {
                         let val = e.target.value.replace(/\D/g, '');
                         if (val.length > 3) val = val.slice(0, 3) + '-' + val.slice(3);
-                        if (val.length > 6) val = val.slice(0, 6) + '-' + val.slice(6, 9);
+                        if (val.length > 6) val = val.slice(0, 6) + '-' + val.slice(6, 11);
                         setFormData({ ...formData, ssn: val });
                       }}
                       placeholder="XXX-XX-XXXX"
@@ -869,7 +877,7 @@ export default function UserProfile() {
                     </div>
                   )}
                 </div>
-              ) : (
+            ) : (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex items-start gap-4">
@@ -889,6 +897,150 @@ export default function UserProfile() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* My Loan Applications */}
+          <Card className="mb-8">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#0033A0]" />
+                My Loan Applications
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              {loansLoading ? (
+                <div className="text-center py-8">
+                  <div className="inline-block w-6 h-6 border-3 border-[#0033A0] border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-gray-600 mt-2">Loading your applications...</p>
+                </div>
+              ) : loans && loans.length > 0 ? (
+                <div className="space-y-4">
+                  {loans.map((loan: any) => (
+                    <div
+                      key={loan.id}
+                      className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">
+                            {loan.loanType === "installment" ? "Installment Loan" : "Short-Term Loan"}
+                          </h4>
+                          <p className="text-sm text-gray-500">
+                            Applied on {new Date(loan.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            loan.status === "approved"
+                              ? "bg-green-100 text-green-800"
+                              : loan.status === "rejected"
+                              ? "bg-red-100 text-red-800"
+                              : loan.status === "pending" || loan.status === "under_review"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : loan.status === "fee_paid" || loan.status === "fee_pending"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {loan.status === "pending"
+                            ? "Pending"
+                            : loan.status === "under_review"
+                            ? "Under Review"
+                            : loan.status === "approved"
+                            ? "Approved"
+                            : loan.status === "fee_pending"
+                            ? "Payment Pending"
+                            : loan.status === "fee_paid"
+                            ? "Payment Confirmed"
+                            : loan.status === "disbursed"
+                            ? "Funded"
+                            : loan.status === "rejected"
+                            ? "Not Approved"
+                            : loan.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3 text-sm">
+                        <div>
+                          <p className="text-gray-500">Requested Amount</p>
+                          <p className="font-semibold text-gray-900">
+                            ${(loan.requestedAmount / 100).toLocaleString()}
+                          </p>
+                        </div>
+                        {loan.approvedAmount && (
+                          <div>
+                            <p className="text-gray-500">Approved Amount</p>
+                            <p className="font-semibold text-green-600">
+                              ${(loan.approvedAmount / 100).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-gray-500">Loan Type</p>
+                          <p className="font-semibold text-gray-900 capitalize">
+                            {loan.loanType?.replace(/_/g, " ")}
+                          </p>
+                        </div>
+                        {loan.processingFeeAmount && (
+                          <div>
+                            <p className="text-gray-500">Processing Fee</p>
+                            <p className="font-semibold text-gray-900">
+                              ${(loan.processingFeeAmount / 100).toFixed(2)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {loan.loanPurpose && (
+                        <div className="mb-3 p-2 bg-gray-50 rounded">
+                          <p className="text-xs text-gray-500">Loan Purpose</p>
+                          <p className="text-sm text-gray-800">{loan.loanPurpose}</p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Link href={`/payment/${loan.id}`} className="inline-block">
+                          <Button
+                            size="sm"
+                            className="bg-[#FFA500] hover:bg-[#FF8C00] text-white"
+                            disabled={
+                              loan.status !== "approved" &&
+                              loan.status !== "fee_pending"
+                            }
+                          >
+                            Pay Fee
+                          </Button>
+                        </Link>
+                        {loan.status === "fee_paid" && (
+                          <Link href={`/disbursement/${loan.id}`} className="inline-block">
+                            <Button
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              Select Disbursement
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">No applications yet</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    You haven't submitted any loan applications
+                  </p>
+                  <Button 
+                    className="bg-[#FFA500] hover:bg-[#FF8C00] text-white mt-4"
+                    onClick={() => setLocation("/apply")}
+                  >
+                    Apply for a Loan
+                  </Button>
                 </div>
               )}
             </CardContent>
@@ -956,14 +1108,14 @@ export default function UserProfile() {
                     <p className="font-semibold text-gray-900">SMS Notifications</p>
                     <p className="text-sm text-gray-600">Receive updates via text message</p>
                   </div>
-                  <input type="checkbox" className="w-5 h-5 text-[#0033A0]" />
+                  <input type="checkbox" className="w-5 h-5 text-[#0033A0]" aria-label="Enable SMS notifications" />
                 </div>
                 <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                   <div>
                     <p className="font-semibold text-gray-900">Marketing Emails</p>
                     <p className="text-sm text-gray-600">Receive promotional offers and updates</p>
                   </div>
-                  <input type="checkbox" className="w-5 h-5 text-[#0033A0]" />
+                  <input type="checkbox" className="w-5 h-5 text-[#0033A0]" aria-label="Enable marketing emails" />
                 </div>
               </div>
               <Button className="w-full mt-6 bg-[#0033A0] hover:bg-[#002080] text-white">
@@ -991,6 +1143,28 @@ export default function UserProfile() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Save button at the end of form - only show when editing */}
+          {isEditing && (
+            <div className="flex gap-4 pt-8 border-t mt-8">
+              <Button
+                onClick={handleSaveProfile}
+                disabled={updateProfileMutation.isPending}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Save className="w-4 h-4" />
+                {updateProfileMutation.isPending ? "Saving..." : "Save All Changes"}
+              </Button>
+              <Button
+                onClick={() => setIsEditing(false)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
       </main>
 
@@ -1005,7 +1179,7 @@ export default function UserProfile() {
 
       {/* Change Password Dialog */}
       <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="!w-11/12 !max-w-none max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5 text-[#0033A0]" />
@@ -1068,7 +1242,7 @@ export default function UserProfile() {
 
       {/* Change Email Dialog */}
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="!w-11/12 !max-w-none max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="w-5 h-5 text-[#0033A0]" />

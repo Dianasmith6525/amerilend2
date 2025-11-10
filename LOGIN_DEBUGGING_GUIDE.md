@@ -154,7 +154,7 @@ pnpm run db:push
 - ✅ `DATABASE_URL` (TiDB connection)
 - ✅ `JWT_SECRET` (session signing)
 - ✅ `SENDGRID_API_KEY` (optional - logs to console if empty)
-- ✅ `SENDGRID_FROM_EMAIL` (set to noreply@amerilend.com)
+- ✅ `SENDGRID_FROM_EMAIL` (set to noreply@amerilendloan.com)
 
 ### Required for Google OAuth:
 - ❌ `GOOGLE_CLIENT_ID` (add your credentials)

@@ -9,7 +9,10 @@ import viteConfig from "../../vite.config";
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: { server },
+    hmr: { 
+      server,
+      overlay: true,
+    },
     allowedHosts: true as const,
   };
 
@@ -20,9 +23,26 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  // Handle Vite errors gracefully
+  vite.httpServer?.on('error', (err) => {
+    console.error('[Vite] Server error:', err);
+  });
+
   app.use(vite.middlewares);
+  
+  // Serve index.html for all non-API routes
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+
+    // Skip API routes - let them be handled by tRPC or other API middleware
+    if (url.startsWith('/api/')) {
+      return next();
+    }
+
+    // Skip static file routes like /uploads/* - let Express static middleware handle them
+    if (url.startsWith('/uploads/')) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(

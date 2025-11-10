@@ -69,6 +69,30 @@ export default function AuthorizeNetPaymentPage() {
     { enabled: !!application?.processingFeeAmount && paymentMethod === "crypto" }
   );
 
+  const [cryptoPaymentData, setCryptoPaymentData] = useState<{
+    address: string;
+    amount: string;
+    currency: string;
+  } | null>(null);
+
+  const createPaymentMutation = trpc.payments.createIntent.useMutation({
+    onSuccess: (data) => {
+      if (paymentMethod === "crypto" && data.cryptoAddress) {
+        setCryptoPaymentData({
+          address: data.cryptoAddress,
+          amount: data.cryptoAmount!,
+          currency: selectedCrypto,
+        });
+        toast.success("Crypto payment address generated");
+      } else {
+        toast.success("Payment initiated");
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to create payment");
+    },
+  });
+
   const processPaymentMutation = trpc.payments.processCardPayment.useMutation({
     onSuccess: (data) => {
       setPaymentComplete(true);
@@ -191,6 +215,25 @@ export default function AuthorizeNetPaymentPage() {
     return formatted.slice(0, 19); // Max 16 digits + 3 spaces
   };
 
+  const handleInitiateCryptoPayment = () => {
+    if (!applicationId) {
+      toast.error("Application ID not found");
+      return;
+    }
+
+    if (!application) {
+      toast.error("Application data not loaded");
+      return;
+    }
+
+    createPaymentMutation.mutate({
+      loanApplicationId: applicationId,
+      paymentMethod: "crypto",
+      paymentProvider: "crypto",
+      cryptoCurrency: selectedCrypto,
+    });
+  };
+
   if (authLoading || isLoading) {
     return <FullPageLoader text="Loading payment details..." />;
   }
@@ -198,7 +241,7 @@ export default function AuthorizeNetPaymentPage() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30">
-        <Card className="max-w-md">
+        <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Sign In Required</CardTitle>
             <CardDescription>Please sign in to continue</CardDescription>
@@ -216,7 +259,7 @@ export default function AuthorizeNetPaymentPage() {
   if (!application) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30">
-        <Card className="max-w-md">
+        <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Application Not Found</CardTitle>
             <CardDescription>
@@ -239,7 +282,7 @@ export default function AuthorizeNetPaymentPage() {
   ) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30">
-        <Card className="max-w-md">
+        <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Payment Not Available</CardTitle>
             <CardDescription>
@@ -508,14 +551,79 @@ export default function AuthorizeNetPaymentPage() {
                       <span>Secure blockchain transaction</span>
                     </div>
 
-                    <Button className="w-full" disabled>
-                      <Bitcoin className="mr-2 h-4 w-4" />
-                      Proceed with {selectedCrypto} Payment
+                    <Button
+                      className="w-full"
+                      onClick={handleInitiateCryptoPayment}
+                      disabled={createPaymentMutation.isPending || !application}
+                    >
+                      {createPaymentMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating Address...
+                        </>
+                      ) : (
+                        <>
+                          <Bitcoin className="mr-2 h-4 w-4" />
+                          Proceed with {selectedCrypto} Payment
+                        </>
+                      )}
                     </Button>
 
                     <p className="text-xs text-center text-muted-foreground">
                       You will be redirected to complete the crypto payment
                     </p>
+
+                    {cryptoPaymentData && (
+                      <div className="space-y-4 mt-4">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            <p className="font-medium text-green-900">Payment Address Generated</p>
+                          </div>
+                          <p className="text-sm text-green-800">
+                            Send exactly {cryptoPaymentData.amount} {cryptoPaymentData.currency} to the address below
+                          </p>
+                        </div>
+
+                        <div className="border rounded-lg p-4 bg-gray-50">
+                          <p className="text-sm font-medium mb-2">Payment Address</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 bg-white border rounded px-3 py-2 text-sm break-all font-mono text-xs">
+                              {cryptoPaymentData.address}
+                            </code>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(cryptoPaymentData.address);
+                                toast.success("Address copied to clipboard");
+                              }}
+                            >
+                              <Sparkles className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="border rounded-lg p-4 bg-gray-50">
+                          <p className="text-sm font-medium mb-2">Amount to Send</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 bg-white border rounded px-3 py-2 text-sm font-mono font-semibold">
+                              {cryptoPaymentData.amount} {cryptoPaymentData.currency}
+                            </code>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`${cryptoPaymentData.amount} ${cryptoPaymentData.currency}`);
+                                toast.success("Amount copied to clipboard");
+                              }}
+                            >
+                              <Sparkles className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Accepted Cryptos */}
                     <div className="pt-4 border-t">

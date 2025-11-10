@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+import mysql, { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { 
   InsertUser, 
   users,
@@ -23,33 +23,163 @@ import {
   InsertReferralCode,
   referrals,
   Referral,
-  InsertReferral
+  InsertReferral,
+  submittedDocuments,
+  InsertSubmittedDocument,
+  SubmittedDocument
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _pool: mysql.Pool | null = null;
+let _isConnected = false;
+let _lastHealthCheck = 0;
+const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+
+// Get raw MySQL connection pool for direct SQL queries
+export function getPool(): mysql.Pool | null {
+  if (!_pool && process.env.DATABASE_URL) {
+    try {
+      const dbUrl = new URL(process.env.DATABASE_URL.replace('mysql://', 'http://'));
+      
+      _pool = mysql.createPool({
+        host: dbUrl.hostname,
+        port: parseInt(dbUrl.port) || 3306,
+        user: dbUrl.username,
+        password: dbUrl.password,
+        database: dbUrl.pathname.substring(1),
+        ssl: false,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        connectTimeout: 60000,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0
+      });
+      
+      console.log('[Database] Pool created');
+    } catch (error) {
+      console.warn("[Database] Failed to create pool:", error);
+      _pool = null;
+    }
+  }
+  return _pool;
+}
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
+      // Parse the DATABASE_URL to extract connection details
+      const dbUrl = new URL(process.env.DATABASE_URL.replace('mysql://', 'http://'));
+      
       // Create connection pool with SSL enabled for TiDB Cloud
+      // Must use mysql2/promise for proper async support
       const pool = mysql.createPool({
-        uri: process.env.DATABASE_URL,
+        host: dbUrl.hostname,
+        port: parseInt(dbUrl.port) || 3306,
+        user: dbUrl.username,
+        password: dbUrl.password,
+        database: dbUrl.pathname.substring(1), // Remove leading slash
         ssl: {
           rejectUnauthorized: true
         },
         waitForConnections: true,
         connectionLimit: 10,
-        queueLimit: 0
+        queueLimit: 0,
+        connectTimeout: 60000, // 60 seconds timeout
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0,
       });
-      _db = drizzle(pool);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      
+      // Test connection and enable auto-reconnect
+      console.log('[Database] Testing connection...');
+      try {
+        const connection = await pool.getConnection();
+        await connection.ping();
+        connection.release();
+        console.log('[Database] ✅ Connected successfully to TiDB Cloud!');
+        _isConnected = true;
+        _lastHealthCheck = Date.now();
+      } catch (testError: any) {
+        console.error('[Database] ⚠️ Initial connection test failed:', testError.message);
+        console.log('[Database] Will retry on next query...');
+        _isConnected = false;
+      }
+      
+      // Handle pool errors
+      pool.on('error', (err: any) => {
+        console.error('[Database] Pool error:', err.message);
+        _isConnected = false;
+        if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNRESET') {
+          console.log('[Database] Connection lost, will auto-reconnect on next query');
+          // Clear the pool to force reconnection
+          _db = null;
+          _pool = null;
+        }
+      });
+      
+      console.log('[Database] ✅ Pool initialized with auto-reconnect');
+      _db = drizzle(pool as any);
+    } catch (error: any) {
+      console.error("[Database] Failed to initialize:", error.message);
       _db = null;
     }
   }
   return _db;
+}
+
+// Health check function - call periodically to maintain connection
+export async function healthCheck(): Promise<boolean> {
+  const now = Date.now();
+  
+  // Skip if recently checked
+  if (_isConnected && (now - _lastHealthCheck) < HEALTH_CHECK_INTERVAL) {
+    return true;
+  }
+  
+  try {
+    const db = await getDb();
+    if (!db) {
+      _isConnected = false;
+      return false;
+    }
+    
+    // Simple query to test connection - just try to query a simple table
+    const { loanApplications } = await import("../drizzle/schema");
+    await db.select().from(loanApplications).limit(1);
+    _isConnected = true;
+    _lastHealthCheck = now;
+    return true;
+  } catch (error: any) {
+    console.error('[Database] Health check failed:', error.message);
+    _isConnected = false;
+    
+    // Force reconnection on next getDb call
+    if (error.code === 'PROTOCOL_CONNECTION_LOST' || 
+        error.code === 'ECONNRESET' || 
+        error.message?.includes('Connection lost')) {
+      console.log('[Database] Forcing reconnection...');
+      _db = null;
+      _pool = null;
+    }
+    
+    return false;
+  }
+}
+
+// Get connection status
+export function isDbConnected(): boolean {
+  return _isConnected;
+}
+
+// Force reconnection
+export async function reconnectDb(): Promise<void> {
+  console.log('[Database] Forcing reconnection...');
+  _db = null;
+  _pool = null;
+  _isConnected = false;
+  await getDb();
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
@@ -69,7 +199,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "loginMethod", "passwordHash"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -81,6 +211,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
 
     textFields.forEach(assignNullable);
+
+    // Handle emailVerified as a separate field (since it's numeric/int)
+    if (user.emailVerified !== undefined) {
+      values.emailVerified = user.emailVerified;
+      updateSet.emailVerified = user.emailVerified;
+    }
 
     if (user.lastSignedIn !== undefined) {
       values.lastSignedIn = user.lastSignedIn;
@@ -147,6 +283,179 @@ export async function getUserByEmail(email: string) {
   }
 }
 
+/**
+ * Update user's email verification token and expiry
+ */
+export async function setEmailVerificationToken(
+  userId: number,
+  token: string,
+  expiryMinutes: number = 30
+): Promise<void> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot set email verification token: database not available");
+    return;
+  }
+
+  try {
+    const expiryTime = new Date(Date.now() + expiryMinutes * 60 * 1000);
+    
+    await db.update(users)
+      .set({
+        emailVerificationToken: token,
+        emailVerificationTokenExpiry: expiryTime,
+      })
+      .where(eq(users.id, userId));
+      
+    console.log(`[Database] Email verification token set for user ${userId}`);
+  } catch (error) {
+    console.error("[Database] Error setting email verification token:", error);
+    throw error;
+  }
+}
+
+/**
+ * Verify email using verification token
+ */
+export async function verifyEmailByToken(token: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot verify email by token: database not available");
+    return false;
+  }
+
+  try {
+    // Find user with this token
+    const result = await db.select()
+      .from(users)
+      .where(eq(users.emailVerificationToken, token))
+      .limit(1);
+
+    if (result.length === 0) {
+      console.log("[Database] No user found with verification token");
+      return false;
+    }
+
+    const user = result[0];
+
+    // Check if token has expired
+    if (
+      !user.emailVerificationTokenExpiry ||
+      new Date() > user.emailVerificationTokenExpiry
+    ) {
+      console.log(`[Database] Verification token expired for user ${user.id}`);
+      return false;
+    }
+
+    // Mark email as verified
+    const now = new Date();
+    await db.update(users)
+      .set({
+        emailVerified: 1,
+        emailVerifiedAt: now,
+        emailVerificationToken: null,
+        emailVerificationTokenExpiry: null,
+      })
+      .where(eq(users.id, user.id));
+
+    console.log(`[Database] ✅ Email verified for user ${user.id}`);
+    return true;
+  } catch (error) {
+    console.error("[Database] Error verifying email by token:", error);
+    throw error;
+  }
+}
+
+/**
+ * Verify email using OTP code (links to existing OTP system)
+ */
+export async function verifyEmailByOTP(
+  email: string,
+  code: string
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot verify email by OTP: database not available");
+    return false;
+  }
+
+  try {
+    // Find user
+    const userResult = await db.select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    if (userResult.length === 0) {
+      console.log("[Database] No user found with email:", email);
+      return false;
+    }
+
+    const user = userResult[0];
+
+    // Check OTP (assumes otpCodes table exists and has been properly verified)
+    // This would be handled by the OTP verification logic in routers
+    // Here we just mark the user as verified once OTP check passes elsewhere
+
+    const now = new Date();
+    await db.update(users)
+      .set({
+        emailVerified: 1,
+        emailVerifiedAt: now,
+      })
+      .where(eq(users.id, user.id));
+
+    console.log(`[Database] ✅ Email verified for user ${user.id} via OTP`);
+    return true;
+  } catch (error) {
+    console.error("[Database] Error verifying email by OTP:", error);
+    throw error;
+  }
+}
+
+/**
+ * Check if user's email is verified
+ */
+export async function isEmailVerified(userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot check email verification: database not available");
+    return false;
+  }
+
+  try {
+    const result = await db.select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (result.length === 0) {
+      return false;
+    }
+
+    return result[0].emailVerified === 1;
+  } catch (error) {
+    console.error("[Database] Error checking email verification:", error);
+    return false;
+  }
+}
+
+export async function getAdminUsers() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] Cannot get admin users: database not available");
+    return [];
+  }
+
+  try {
+    const result = await db.select().from(users).where(eq(users.role, "admin"));
+    return result;
+  } catch (error) {
+    console.error("[Database] Error querying admin users:", error);
+    return [];
+  }
+}
+
 export async function getUserById(id: number) {
   const db = await getDb();
   if (!db) {
@@ -197,6 +506,14 @@ export async function getLoanApplicationById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getLoanApplicationByReferenceNumber(referenceNumber: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(loanApplications).where(eq(loanApplications.applicationReferenceNumber, referenceNumber)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function getLoanApplicationsByUserId(userId: number) {
   const db = await getDb();
   if (!db) return [];
@@ -209,7 +526,7 @@ export async function getAllLoanApplications() {
   if (!db) return [];
   
   // Join with users table to get complete borrower information
-  return db.select({
+  const result = await db.select({
     // Loan application fields
     id: loanApplications.id,
     userId: loanApplications.userId,
@@ -222,12 +539,9 @@ export async function getAllLoanApplications() {
     rejectionReason: loanApplications.rejectionReason,
     processingFeeAmount: loanApplications.processingFeeAmount,
     approvedAt: loanApplications.approvedAt,
-    rejectedAt: loanApplications.rejectedAt,
     disbursedAt: loanApplications.disbursedAt,
     createdAt: loanApplications.createdAt,
     updatedAt: loanApplications.updatedAt,
-    fraudScore: loanApplications.fraudScore,
-    fraudFlags: loanApplications.fraudFlags,
     
     // User fields - Basic Info
     fullName: loanApplications.fullName,
@@ -259,6 +573,20 @@ export async function getAllLoanApplications() {
     priorBankruptcy: loanApplications.priorBankruptcy,
     bankruptcyDate: loanApplications.bankruptcyDate,
   }).from(loanApplications).orderBy(desc(loanApplications.createdAt));
+
+  // Debug log first result
+  if (result.length > 0) {
+    console.log('[getAllLoanApplications] First app from DB:', {
+      id: result[0].id,
+      fullName: result[0].fullName,
+      requestedAmount: result[0].requestedAmount,
+      requestedType: typeof result[0].requestedAmount,
+      monthlyIncome: result[0].monthlyIncome,
+      incomeType: typeof result[0].monthlyIncome,
+    });
+  }
+
+  return result;
 }
 
 export async function updateLoanApplicationStatus(
@@ -320,7 +648,15 @@ export async function createPayment(data: InsertPayment) {
   if (!db) throw new Error("Database not available");
   
   const result = await db.insert(payments).values(data);
-  return result;
+  
+  // Drizzle's insert() doesn't return the inserted record
+  // We need to query it back. Get the most recent payment for this application
+  const inserted = await db.select().from(payments)
+    .where(eq(payments.loanApplicationId, data.loanApplicationId))
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
+  
+  return inserted[0] || result;
 }
 
 export async function getPaymentById(id: number) {
@@ -716,6 +1052,20 @@ export async function updateUser(userId: number, data: Partial<{
   city?: string;
   state?: string;
   zipCode?: string;
+  // NEW PROFILE FIELDS:
+  middleInitial?: string;
+  dateOfBirth?: string;
+  ssn?: string;
+  idType?: string;
+  idNumber?: string;
+  maritalStatus?: string;
+  dependents?: number;
+  citizenshipStatus?: string;
+  employmentStatus?: string;
+  employer?: string;
+  monthlyIncome?: number;
+  priorBankruptcy?: number;
+  bankruptcyDate?: string;
 }>) {
   try {
     const db = await getDb();
@@ -733,6 +1083,27 @@ export async function updateUser(userId: number, data: Partial<{
   } catch (error) {
     console.error("[Update User] Error:", error);
     return false;
+  }
+}
+
+/**
+ * Update user role (admin only)
+ */
+export async function updateUserRole(userId: number, role: 'user' | 'admin') {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
+    await db
+      .update(users)
+      .set({ role })
+      .where(eq(users.id, userId));
+    
+    console.log(`[DB] Updated user ${userId} role to ${role}`);
+    return { success: true };
+  } catch (error) {
+    console.error("[Update User Role] Error:", error);
+    throw error;
   }
 }
 
@@ -813,12 +1184,6 @@ export async function getUserActivity(userId: number, limit: number = 10) {
 /**
  * User notification preferences
  */
-const userPreferencesCache = new Map<number, {
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  marketingEmails: boolean;
-}>();
-
 /**
  * Update user preferences
  */
@@ -828,17 +1193,38 @@ export async function updateUserPreferences(userId: number, preferences: {
   marketingEmails?: boolean;
 }) {
   try {
-    // Store in-memory for now (in production, would persist to DB)
-    const existing = userPreferencesCache.get(userId) || {
-      emailNotifications: true,
-      smsNotifications: false,
-      marketingEmails: false,
-    };
+    const pool = getPool();
+    if (!pool) return false;
 
-    const updated = { ...existing, ...preferences };
-    userPreferencesCache.set(userId, updated);
+    // Convert boolean to int (0 or 1)
+    const data: any = {};
+    if (preferences.emailNotifications !== undefined) {
+      data.emailNotifications = preferences.emailNotifications ? 1 : 0;
+    }
+    if (preferences.smsNotifications !== undefined) {
+      data.smsNotifications = preferences.smsNotifications ? 1 : 0;
+    }
+    if (preferences.marketingEmails !== undefined) {
+      data.marketingEmails = preferences.marketingEmails ? 1 : 0;
+    }
 
-    console.log(`[User Preferences] Updated for user ${userId}:`, updated);
+    // Insert or update preferences
+    const [result] = await pool.query<ResultSetHeader>(
+      `INSERT INTO userPreferences (userId, emailNotifications, smsNotifications, marketingEmails)
+       VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         emailNotifications = VALUES(emailNotifications),
+         smsNotifications = VALUES(smsNotifications),
+         marketingEmails = VALUES(marketingEmails)`,
+      [
+        userId,
+        data.emailNotifications ?? 1,
+        data.smsNotifications ?? 1,
+        data.marketingEmails ?? 0
+      ]
+    );
+
+    console.log(`[User Preferences] Updated for user ${userId}:`, preferences);
     return true;
   } catch (error) {
     console.error("[Update User Preferences] Error:", error);
@@ -851,11 +1237,35 @@ export async function updateUserPreferences(userId: number, preferences: {
  */
 export async function getUserPreferences(userId: number) {
   try {
-    // Return cached or default preferences
-    return userPreferencesCache.get(userId) || {
-      emailNotifications: true,
-      smsNotifications: false,
-      marketingEmails: false,
+    const pool = getPool();
+    if (!pool) {
+      return {
+        emailNotifications: true,
+        smsNotifications: false,
+        marketingEmails: false,
+      };
+    }
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT * FROM userPreferences WHERE userId = ?',
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      // Create default preferences
+      await updateUserPreferences(userId, {});
+      return {
+        emailNotifications: true,
+        smsNotifications: false,
+        marketingEmails: false,
+      };
+    }
+
+    const prefs = rows[0];
+    return {
+      emailNotifications: prefs.emailNotifications === 1,
+      smsNotifications: prefs.smsNotifications === 1,
+      marketingEmails: prefs.marketingEmails === 1,
     };
   } catch (error) {
     console.error("[Get User Preferences] Error:", error);
@@ -1198,3 +1608,565 @@ export async function getReferralStats(userId: number): Promise<{
   }
 }
 
+/**
+ * Insert a submitted document record for identity verification
+ * Stores document metadata and base64 data URL for storage/verification
+ */
+export async function insertSubmittedDocument(data: InsertSubmittedDocument) {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
+    const result = await db.insert(submittedDocuments).values(data);
+    console.log(`[DB] Inserted submitted document for application ${data.loanApplicationId}, type: ${data.documentType}`);
+    return result;
+  } catch (error) {
+    console.error("[Insert Submitted Document] Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all submitted documents for a loan application
+ */
+export async function getSubmittedDocumentsByApplicationId(applicationId: number) {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
+    const docs = await db
+      .select()
+      .from(submittedDocuments)
+      .where(eq(submittedDocuments.loanApplicationId, applicationId));
+    return docs;
+  } catch (error) {
+    console.error("[Get Submitted Documents] Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Get submitted documents with application and verifier context for admin review
+ */
+export async function getSubmittedDocumentsForAdmin(status?: SubmittedDocument["verificationStatus"] | "all") {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    const baseQuery = db
+      .select({
+        id: submittedDocuments.id,
+        loanApplicationId: submittedDocuments.loanApplicationId,
+        documentType: submittedDocuments.documentType,
+        fileName: submittedDocuments.fileName,
+        fileUrl: submittedDocuments.fileUrl,
+        fileSize: submittedDocuments.fileSize,
+        mimeType: submittedDocuments.mimeType,
+        uploadedAt: submittedDocuments.uploadedAt,
+        verificationStatus: submittedDocuments.verificationStatus,
+        notes: submittedDocuments.notes,
+        verifiedBy: submittedDocuments.verifiedBy,
+        verifiedAt: submittedDocuments.verifiedAt,
+        applicantName: loanApplications.fullName,
+        applicantEmail: loanApplications.email,
+        applicantPhone: loanApplications.phone,
+        applicationStatus: loanApplications.status,
+        applicationCreatedAt: loanApplications.createdAt,
+        verifierName: users.name,
+        verifierEmail: users.email,
+      })
+      .from(submittedDocuments)
+      .leftJoin(loanApplications, eq(submittedDocuments.loanApplicationId, loanApplications.id))
+      .leftJoin(users, eq(submittedDocuments.verifiedBy, users.id));
+
+    if (status && status !== "all") {
+      return await baseQuery
+        .where(eq(submittedDocuments.verificationStatus, status))
+        .orderBy(desc(submittedDocuments.uploadedAt));
+    }
+
+    return await baseQuery.orderBy(desc(submittedDocuments.uploadedAt));
+  } catch (error) {
+    console.error("[Get Submitted Documents For Admin] Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Update document verification status/notes from the admin panel
+ */
+export async function updateSubmittedDocumentVerification(
+  documentId: number,
+  status: SubmittedDocument["verificationStatus"],
+  notes?: string,
+  verifierId?: number | null,
+) {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    const payload: Partial<SubmittedDocument> = {
+      verificationStatus: status,
+      notes: notes?.trim() ? notes.trim() : null,
+      verifiedBy: verifierId ?? null,
+      verifiedAt: verifierId ? new Date() : null,
+    };
+
+    await db
+      .update(submittedDocuments)
+      .set(payload)
+      .where(eq(submittedDocuments.id, documentId));
+
+    console.log(`[DB] Updated document ${documentId} verification status -> ${status}`);
+    return { success: true };
+  } catch (error) {
+    console.error("[Update Submitted Document Verification] Error:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get all users (admin only)
+ */
+export async function getAllUsers() {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
+    const allUsers = await db.select().from(users);
+    return allUsers;
+  } catch (error) {
+    console.error("[Get All Users] Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Get all payments (admin only)
+ */
+export async function getAllPayments() {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
+    const { payments } = await import("../drizzle/schema");
+    const allPayments = await db.select().from(payments);
+    return allPayments;
+  } catch (error) {
+    console.error("[Get All Payments] Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Get payments by user ID
+ */
+export async function getPaymentsByUserId(userId: number) {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
+    const { payments } = await import("../drizzle/schema");
+    const userPayments = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.userId, userId));
+    
+    return userPayments;
+  } catch (error) {
+    console.error("[Get Payments By User ID] Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Get a single submitted document by ID
+ */
+export async function getSubmittedDocumentById(documentId: number) {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    const result = await db
+      .select()
+      .from(submittedDocuments)
+      .where(eq(submittedDocuments.id, documentId))
+      .limit(1);
+
+    return result[0] || null;
+  } catch (error) {
+    console.error(`[Get Submitted Document By ID] Error:`, error);
+    return null;
+  }
+}
+
+/**
+ * Update document file data after reupload
+ */
+export async function updateSubmittedDocumentFile(
+  documentId: number,
+  data: {
+    fileName: string;
+    fileUrl: string;
+    fileSize: number;
+    mimeType: string;
+    verificationStatus: string;
+    uploadedAt: Date;
+  }
+) {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    await db
+      .update(submittedDocuments)
+      .set({
+        fileName: data.fileName,
+        fileUrl: data.fileUrl,
+        fileSize: data.fileSize,
+        mimeType: data.mimeType,
+        verificationStatus: data.verificationStatus as any,
+        uploadedAt: data.uploadedAt,
+        // Clear previous verification data since it's a new upload
+        verifiedBy: null,
+        verifiedAt: null,
+        notes: null,
+      })
+      .where(eq(submittedDocuments.id, documentId));
+
+    console.log(`[DB] Updated document ${documentId} file data after reupload`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[Update Submitted Document File] Error:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Update document status (for admin approve/reject/request reupload)
+ */
+export async function updateSubmittedDocumentStatus(
+  documentId: number,
+  status: 'approved' | 'rejected' | 'needs_reupload',
+  adminNote?: string
+) {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    await db
+      .update(submittedDocuments)
+      .set({
+        verificationStatus: status as any,
+        notes: adminNote || null,
+        verifiedAt: new Date(),
+      })
+      .where(eq(submittedDocuments.id, documentId));
+
+    console.log(`[DB] Updated document ${documentId} status to ${status}`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[Update Submitted Document Status] Error:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get all documents (admin only)
+ */
+export async function getAllDocuments() {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+    
+    const allDocs = await db
+      .select()
+      .from(submittedDocuments)
+      .orderBy(desc(submittedDocuments.uploadedAt));
+    
+    return allDocs;
+  } catch (error) {
+    console.error("[Get All Documents] Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Update document verification (alias for consistency)
+ */
+export async function updateDocumentVerification(
+  documentId: number,
+  status: 'approved' | 'rejected' | 'needs_reupload',
+  verifierId: number,
+  notes?: string
+) {
+  return updateSubmittedDocumentVerification(documentId, status, notes, verifierId);
+}
+
+/**
+ * Generate email verification token and store in database
+ */
+export async function generateEmailVerificationToken(applicationId: number): Promise<string> {
+  const crypto = await import('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiryTime = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+  
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+  
+  const { loanApplications } = await import('../drizzle/schema');
+  
+  await db.update(loanApplications)
+    .set({
+      emailVerificationToken: token,
+      emailVerificationTokenExpiry: expiryTime,
+    })
+    .where(eq(loanApplications.id, applicationId));
+  
+  return token;
+}
+
+/**
+ * Verify email with token
+ */
+export async function verifyEmailToken(applicationId: number, token: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+  
+  const { loanApplications } = await import('../drizzle/schema');
+  
+  // Get the application
+  const application = await db.query.loanApplications.findFirst({
+    where: eq(loanApplications.id, applicationId)
+  });
+  
+  if (!application) return false;
+  
+  // Check if token matches and is not expired
+  if (application.emailVerificationToken !== token) return false;
+  
+  const now = new Date();
+  if (application.emailVerificationTokenExpiry && application.emailVerificationTokenExpiry < now) {
+    return false; // Token expired
+  }
+  
+  // Mark email as verified
+  await db.update(loanApplications)
+    .set({
+      emailVerified: 1,
+      emailVerificationToken: null,
+      emailVerificationTokenExpiry: null,
+      emailVerifiedAt: now,
+    })
+    .where(eq(loanApplications.id, applicationId));
+  
+  return true;
+}
+
+/**
+ * Check if email is verified for a loan application
+ */
+export async function isApplicationEmailVerified(applicationId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+  
+  const { loanApplications } = await import('../drizzle/schema');
+  
+  const application = await db.query.loanApplications.findFirst({
+    where: eq(loanApplications.id, applicationId)
+  });
+  
+  return application?.emailVerified === 1;
+}
+
+/**
+ * Encrypt and store a disbursement with sensitive field encryption
+ */
+export async function createEncryptedDisbursement(data: InsertDisbursement): Promise<void> {
+  const { encryptFields, SENSITIVE_DISBURSEMENT_FIELDS } = await import('./_core/encryption');
+  
+  // Encrypt sensitive fields
+  const encryptedData = encryptFields(data, SENSITIVE_DISBURSEMENT_FIELDS as any);
+  
+  // Track which fields were encrypted
+  encryptedData.encryptedFields = SENSITIVE_DISBURSEMENT_FIELDS.filter(field => 
+    (data as any)[field] !== null && (data as any)[field] !== undefined
+  ) as any;
+
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  await db.insert(disbursements).values(encryptedData);
+}
+
+/**
+ * Retrieve and decrypt a disbursement
+ */
+export async function getDecryptedDisbursement(id: number): Promise<Disbursement | undefined> {
+  const { decryptFields } = await import('./_core/encryption');
+  
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  const result = await db.query.disbursements.findFirst({
+    where: eq(disbursements.id, id)
+  });
+
+  if (!result || !result.encryptedFields) return result;
+
+  // Decrypt the encrypted fields
+  return decryptFields(result, result.encryptedFields as any);
+}
+
+/**
+ * Encrypt and store a payment with sensitive field encryption
+ */
+export async function createEncryptedPayment(data: InsertPayment): Promise<void> {
+  const { encryptFields, SENSITIVE_PAYMENT_FIELDS } = await import('./_core/encryption');
+  
+  // Encrypt sensitive fields
+  const encryptedData = encryptFields(data, SENSITIVE_PAYMENT_FIELDS as any);
+  
+  // Track which fields were encrypted
+  encryptedData.encryptedFields = SENSITIVE_PAYMENT_FIELDS.filter(field => 
+    (data as any)[field] !== null && (data as any)[field] !== undefined
+  ) as any;
+
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  await db.insert(payments).values(encryptedData);
+}
+
+/**
+ * Retrieve and decrypt a payment
+ */
+export async function getDecryptedPayment(id: number): Promise<Payment | undefined> {
+  const { decryptFields } = await import('./_core/encryption');
+  
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  const result = await db.query.payments.findFirst({
+    where: eq(payments.id, id)
+  });
+
+  if (!result || !result.encryptedFields) return result;
+
+  // Decrypt the encrypted fields
+  return decryptFields(result, result.encryptedFields as any);
+}
+
+/**
+ * Get all payments eligible for retry
+ * Checks: isRetryEligible, nextRetryAt <= now, retryCount < maxRetries, status is retryable
+ */
+export async function getRetryEligiblePayments(): Promise<Payment[]> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  const now = new Date();
+  
+  const results = await db.query.payments.findMany({
+    where: (payments, { and, eq, lte, lt }) => and(
+      eq(payments.isRetryEligible, 1),
+      lte(payments.nextRetryAt, now),
+      lt(payments.retryCount, payments.maxRetries),
+      // Status must be "failed" or "declined" to be retryable
+      eq(payments.status, 'failed' as any)
+    )
+  });
+
+  return results || [];
+}
+
+/**
+ * Get count of failed payments for a loan in the past X hours
+ * Used for fraud pattern detection
+ */
+export async function getPaymentFailureCount(loanId: number, hoursBack: number = 24): Promise<number> {
+  const pool = getPool();
+  if (!pool) throw new Error('Database pool not initialized');
+
+  const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+  
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT COUNT(*) as count FROM payments 
+     WHERE loan_id = ? AND status IN ('failed', 'declined') AND created_at >= ?`,
+    [loanId, cutoffTime]
+  );
+
+  return rows[0]?.count || 0;
+}
+
+/**
+ * Get current fraud score for an application
+ * Used to determine if payment should be retried
+ */
+export async function getApplicationFraudScore(loanId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  const [rows] = await (getPool() as any).query<RowDataPacket[]>(
+    `SELECT SUM(fraud_score) as total_score FROM fraud_audit_log 
+     WHERE loan_id = ? AND status = 'active'`,
+    [loanId]
+  );
+
+  return rows[0]?.total_score || 0;
+}
+
+/**
+ * Find payment by Stripe charge ID
+ * Used for webhook processing
+ */
+export async function getPaymentByStripeChargeId(chargeId: string): Promise<Payment | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  const result = await db.query.payments.findFirst({
+    where: eq(payments.stripeChargeId, chargeId)
+  });
+
+  return result;
+}
+
+/**
+ * Find payment by Authorize.Net transaction ID
+ * Used for webhook processing
+ */
+export async function getPaymentByAuthorizeNetTransactionId(txId: string): Promise<Payment | undefined> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  const result = await db.query.payments.findFirst({
+    where: eq(payments.authorizeNetTransactionId, txId)
+  });
+
+  return result;
+}
+
+/**
+ * Update payment retry fields
+ * Called after a retry attempt
+ */
+export async function updatePaymentRetry(
+  paymentId: number, 
+  retryCount: number, 
+  nextRetryAt: Date | null,
+  isRetryEligible: boolean = true
+): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not initialized');
+
+  await db
+    .update(payments)
+    .set({
+      retryCount,
+      lastRetryAt: new Date(),
+      nextRetryAt,
+      isRetryEligible: isRetryEligible ? 1 : 0,
+      updatedAt: new Date()
+    })
+    .where(eq(payments.id, paymentId));
+}

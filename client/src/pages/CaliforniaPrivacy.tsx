@@ -20,7 +20,7 @@ export default function CaliforniaPrivacy() {
 
       {/* Content */}
       <main className="flex-1 py-12">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="container mx-auto px-4 max-w-5xl">
           <Link href="/apply">
             <Button variant="ghost" className="mb-6 text-[#0033A0]">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -66,7 +66,7 @@ export default function CaliforniaPrivacy() {
                 To exercise any of these rights, please contact us at:
               </p>
               <div className="mt-4 p-4 bg-gray-100 rounded space-y-2">
-                <p><strong>Email:</strong> <a href="mailto:info@amerilend.com" className="text-[#0033A0] hover:underline">info@amerilend.com</a></p>
+                <p><strong>Email:</strong> <a href="mailto:info@amerilendloan.com" className="text-[#0033A0] hover:underline">info@amerilendloan.com</a></p>
                 <p><strong>Phone:</strong> (800) 990-9130</p>
                 <p><strong>Hours:</strong> Monday – Friday: 7 a.m. – 11:00 p.m. Central Time</p>
                 <p className="text-sm">Saturday & Sunday: 9 a.m. – 5:00 p.m. Central Time</p>
@@ -80,7 +80,7 @@ export default function CaliforniaPrivacy() {
               </p>
               <div className="mt-4">
                 <Button className="bg-[#FFA500] hover:bg-[#FF8C00] text-white">
-                  <a href="mailto:info@amerilend.com?subject=Do%20Not%20Sell%20My%20Personal%20Information">
+                  <a href="mailto:info@amerilendloan.com?subject=Do%20Not%20Sell%20My%20Personal%20Information">
                     Do Not Sell My Personal Information
                   </a>
                 </Button>
@@ -103,7 +103,7 @@ export default function CaliforniaPrivacy() {
 
             <section className="mt-8 p-4 bg-blue-50 rounded-lg border-l-4 border-[#0033A0]">
               <p className="text-sm text-gray-600">
-                Last Updated: November 2025. For questions about your California privacy rights, please contact us at info@amerilend.com or (800) 990-9130.
+                Last Updated: November 2025. For questions about your California privacy rights, please contact us at info@amerilendloan.com or (800) 990-9130.
               </p>
             </section>
           </div>

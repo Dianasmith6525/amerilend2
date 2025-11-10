@@ -171,7 +171,7 @@ All notices under this Agreement shall be in writing and delivered to:
 **To Lender:**  
 AmeriLend  
 [Business Address]  
-Email: support@amerilend.com
+Email: support@amerilendloan.com
 
 **To Borrower:**  
 [BORROWER NAME]  
@@ -256,4 +256,4 @@ Date: [LENDER SIGNATURE DATE]
 
 ---
 
-**IMPORTANT:** This is a legally binding contract. Keep a copy for your records. If you have questions, contact us at support@amerilend.com or 1-800-AMERILEND.
+**IMPORTANT:** This is a legally binding contract. Keep a copy for your records. If you have questions, contact us at support@amerilendloan.com or 1-800-AMERILEND.

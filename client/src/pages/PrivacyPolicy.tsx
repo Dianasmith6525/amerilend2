@@ -89,7 +89,7 @@ export default function PrivacyPolicy() {
             <section>
               <h2 className="text-2xl font-bold text-[#0033A0] mb-3">6. Your Privacy Rights</h2>
               <p className="text-gray-700 leading-relaxed">
-                Depending on your location, you may have certain privacy rights, including the right to access, correct, or delete your personal information. To exercise these rights, please contact us at info@amerilend.com.
+                Depending on your location, you may have certain privacy rights, including the right to access, correct, or delete your personal information. To exercise these rights, please contact us at info@amerilendloan.com.
               </p>
             </section>
 
@@ -109,7 +109,7 @@ export default function PrivacyPolicy() {
 
             <section className="mt-8 p-4 bg-blue-50 rounded-lg border-l-4 border-[#0033A0]">
               <p className="text-sm text-gray-600">
-                Last Updated: November 2025. If you have any questions about this Privacy Policy, please contact us at info@amerilend.com or (800) 990-9130.
+                Last Updated: November 2025. If you have any questions about this Privacy Policy, please contact us at info@amerilendloan.com or (800) 990-9130.
               </p>
             </section>
           </div>

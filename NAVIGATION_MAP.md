@@ -74,7 +74,7 @@ Complete mapping of all buttons and links that redirect between pages in the Ame
 | Link Text | Destination | Type |
 |-----------|-------------|------|
 | How Payday Loans Work | `https://paydayloaninfo.org/how-payday-loans-work/` | External (new tab) |
-| Trustpilot Reviews | `https://www.trustpilot.com/review/amerilend.com` | External (new tab) |
+| Trustpilot Reviews | `https://www.trustpilot.com/review/amerilendloan.com` | External (new tab) |
 | BBB Profile | `https://www.bbb.org/us/ca/los-angeles/profile/personal-loans/amerilend-llc-0000000000` | External (new tab) |
 | LendingTree Reviews | `https://www.lendingtree.com/personal/personal-loans/reviews/amerilend` | External (new tab) |
 
@@ -83,7 +83,7 @@ Complete mapping of all buttons and links that redirect between pages in the Ame
 | Contact Method | Destination | Type |
 |----------------|-------------|------|
 | Phone | `tel:1-800-555-0100` | Tel Link |
-| Email | `mailto:support@amerilend.com` | Email Link |
+| Email | `mailto:support@amerilendloan.com` | Email Link |
 
 ---
 
@@ -127,7 +127,7 @@ Complete mapping of all buttons and links that redirect between pages in the Ame
 |-----------|-------------|------|
 | FAQ | `#faq` | Anchor |
 | Phone Support | `tel:1-800-555-0100` | Tel Link |
-| Email | `mailto:info@amerilend.com` | Email Link |
+| Email | `mailto:info@amerilendloan.com` | Email Link |
 
 ---
 
@@ -213,7 +213,7 @@ Complete mapping of all buttons and links that redirect between pages in the Ame
 | Contact | Destination | Type |
 |---------|-------------|------|
 | Phone | `tel:1-800-555-0100` | Tel Link |
-| Email | `mailto:support@amerilend.com` | Email Link |
+| Email | `mailto:support@amerilendloan.com` | Email Link |
 
 ---
 
@@ -233,7 +233,7 @@ Complete mapping of all buttons and links that redirect between pages in the Ame
 | Contact | Destination | Type |
 |---------|-------------|------|
 | Phone | `tel:1-800-555-0100` | Tel Link |
-| Email | `mailto:support@amerilend.com` | Email Link |
+| Email | `mailto:support@amerilendloan.com` | Email Link |
 
 ---
 
@@ -305,8 +305,8 @@ Complete mapping of all buttons and links that redirect between pages in the Ame
 
 | Contact | Destination | Type |
 |---------|-------------|------|
-| Email | `mailto:info@amerilend.com` | Email Link |
-| Do Not Sell | `mailto:info@amerilend.com?subject=Do%20Not%20Sell%20My%20Personal%20Information` | Email Link |
+| Email | `mailto:info@amerilendloan.com` | Email Link |
+| Do Not Sell | `mailto:info@amerilendloan.com?subject=Do%20Not%20Sell%20My%20Personal%20Information` | Email Link |
 
 ---
 

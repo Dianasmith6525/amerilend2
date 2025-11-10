@@ -21,4 +21,25 @@ export const ENV = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ?? "",
   GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL ?? "",
+  
+  // Facebook OAuth Configuration
+  FACEBOOK_APP_ID: process.env.FACEBOOK_APP_ID ?? "",
+  FACEBOOK_APP_SECRET: process.env.FACEBOOK_APP_SECRET ?? "",
+  FACEBOOK_CALLBACK_URL: process.env.FACEBOOK_CALLBACK_URL ?? "",
+  
+  // Apple OAuth Configuration
+  APPLE_TEAM_ID: process.env.APPLE_TEAM_ID ?? "",
+  APPLE_CLIENT_ID: process.env.APPLE_CLIENT_ID ?? "",
+  APPLE_KEY_ID: process.env.APPLE_KEY_ID ?? "",
+  APPLE_PRIVATE_KEY: process.env.APPLE_PRIVATE_KEY ?? "",
+  APPLE_CALLBACK_URL: process.env.APPLE_CALLBACK_URL ?? "",
+  
+  // Microsoft OAuth Configuration
+  MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID ?? "",
+  MICROSOFT_CLIENT_SECRET: process.env.MICROSOFT_CLIENT_SECRET ?? "",
+  MICROSOFT_CALLBACK_URL: process.env.MICROSOFT_CALLBACK_URL ?? "",
+  
+  // Stripe Configuration
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ?? "",
+  STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY ?? "",
 };

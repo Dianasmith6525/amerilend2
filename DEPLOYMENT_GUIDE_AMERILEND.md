@@ -1,13 +1,13 @@
-# AmeriLend Deployment Guide - www.amerilend.net
+# AmeriLend Deployment Guide - www.amerilendloan.com
 
 ## Overview
-This guide will walk you through deploying your AmeriLend application to production on **www.amerilend.net** (Squarespace domain) with your **manus.im database**.
+This guide will walk you through deploying your AmeriLend application to production on **www.amerilendloan.com** (Squarespace domain) with your **manus.im database**.
 
 **Technology Stack:**
 - Frontend: React + Vite
 - Backend: Express.js + tRPC + Node.js
 - Database: Manus.im (TiDB MySQL)
-- Domain: www.amerilend.net (Squarespace)
+- Domain: www.amerilendloan.com (Squarespace)
 
 ---
 
@@ -49,7 +49,7 @@ PORT=3000
 
 # SendGrid Email Service (REQUIRED for OTP login)
 SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxx
-SENDGRID_FROM_EMAIL=noreply@amerilend.net
+SENDGRID_FROM_EMAIL=noreply@amerilendloan.com
 
 # Twilio SMS (Optional - for SMS OTP)
 TWILIO_ACCOUNT_SID=your-twilio-account-sid
@@ -182,13 +182,13 @@ vercel env add SENDGRID_API_KEY
 
 1. In Vercel Dashboard → Your Project → Settings → Domains
 2. Click "Add Domain"
-3. Enter: `www.amerilend.net`
+3. Enter: `www.amerilendloan.com`
 4. Vercel will provide DNS records (A record or CNAME)
 
 ### B. Configure Squarespace DNS
 
 1. Log into Squarespace: https://account.squarespace.com
-2. Go to Settings → Domains → www.amerilend.net
+2. Go to Settings → Domains → www.amerilendloan.com
 3. Click "DNS Settings"
 4. Add the records Vercel provided:
 
@@ -199,7 +199,7 @@ Host: www
 Value: cname.vercel-dns.com
 ```
 
-**For root domain (amerilend.net):**
+**For root domain (amerilendloan.com):**
 ```
 Type: A
 Host: @
@@ -238,7 +238,7 @@ npm run db:push
 
 ### ✅ Test Checklist:
 
-1. **Visit your site**: https://www.amerilend.net
+1. **Visit your site**: https://www.amerilendloan.com
 2. **Test OTP Login**:
    - Try logging in with email
    - Verify OTP email arrives (check spam folder)
@@ -294,7 +294,7 @@ Before going live:
 - [ ] Database uses SSL connection (already configured in drizzle.config.ts)
 - [ ] HTTPS is enabled (automatic with Vercel)
 - [ ] Authorize.Net is in production mode (not sandbox)
-- [ ] SendGrid "From Email" matches your domain (@amerilend.net)
+- [ ] SendGrid "From Email" matches your domain (@amerilendloan.com)
 - [ ] CORS is properly configured for production domain
 - [ ] Remove any console.log statements with sensitive data
 - [ ] Rate limiting is enabled for OTP endpoints

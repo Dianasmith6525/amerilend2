@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, date, tinyint } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, date, tinyint, index, json } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -44,10 +44,21 @@ export const users = mysqlTable("users", {
   priorBankruptcy: int("priorBankruptcy").default(0), // 0 = no, 1 = yes
   bankruptcyDate: varchar("bankruptcyDate", { length: 10 }), // YYYY-MM-DD, optional
   
+  // Email verification
+  emailVerified: int("emailVerified").notNull().default(0), // 0 = not verified, 1 = verified
+  emailVerificationToken: varchar("emailVerificationToken", { length: 255 }), // token for verification link
+  emailVerificationTokenExpiry: timestamp("emailVerificationTokenExpiry"), // when token expires
+  emailVerifiedAt: timestamp("emailVerifiedAt"), // when email was verified
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Performance indexes
+  emailIdx: index("email_idx").on(table.email),
+  roleIdx: index("role_idx").on(table.role),
+  createdAtIdx: index("created_at_idx").on(table.createdAt),
+}));
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -64,7 +75,11 @@ export const otpCodes = mysqlTable("otpCodes", {
   verified: int("verified").default(0).notNull(), // 0 = not verified, 1 = verified
   attempts: int("attempts").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for quick OTP lookups
+  emailIdx: index("email_idx").on(table.email),
+  emailExpiresAtIdx: index("email_expires_at_idx").on(table.email, table.expiresAt),
+}));
 
 export type OtpCode = typeof otpCodes.$inferSelect;
 export type InsertOtpCode = typeof otpCodes.$inferInsert;
@@ -86,7 +101,11 @@ export const legalAcceptances = mysqlTable("legalAcceptances", {
   ipAddress: varchar("ipAddress", { length: 45 }),  // IPv4 or IPv6
   userAgent: text("userAgent"),
   acceptedAt: timestamp("acceptedAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Index for user-specific legal acceptances
+  userIdIdx: index("user_id_idx").on(table.userId),
+  loanApplicationIdIdx: index("loan_application_id_idx").on(table.loanApplicationId),
+}));
 
 export type LegalAcceptance = typeof legalAcceptances.$inferSelect;
 export type InsertLegalAcceptance = typeof legalAcceptances.$inferInsert;
@@ -164,12 +183,37 @@ export const loanApplications = mysqlTable("loanApplications", {
   rejectionReason: text("rejectionReason"),
   adminNotes: text("adminNotes"),
   
+  // Application Reference Number (unique identifier for user-facing display)
+  applicationReferenceNumber: varchar("applicationReferenceNumber", { length: 50 }).unique().notNull(),
+  
+  // Identity verification
+  identityVerificationStatus: mysqlEnum("identityVerificationStatus", ["pending", "approved", "rejected"]).default("pending").notNull(),
+  verificationNotes: text("verificationNotes"),
+  verifiedBy: int("verifiedBy"), // Admin user ID who verified
+  verificationDate: timestamp("verificationDate"),
+  
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   approvedAt: timestamp("approvedAt"),
   disbursedAt: timestamp("disbursedAt"),
-});
+  
+  // Email verification
+  emailVerified: int("emailVerified").notNull().default(0), // 0 = not verified, 1 = verified
+  emailVerificationToken: varchar("emailVerificationToken", { length: 255 }), // token for verification link
+  emailVerificationTokenExpiry: timestamp("emailVerificationTokenExpiry"), // when token expires
+  emailVerifiedAt: timestamp("emailVerifiedAt"), // when email was verified
+}, (table) => ({
+  // Performance indexes for frequently queried fields
+  userIdIdx: index("user_id_idx").on(table.userId),
+  emailIdx: index("email_idx").on(table.email),
+  statusIdx: index("status_idx").on(table.status),
+  createdAtIdx: index("created_at_idx").on(table.createdAt),
+  applicationRefIdx: index("app_ref_idx").on(table.applicationReferenceNumber),
+  identityVerificationStatusIdx: index("identity_verification_status_idx").on(table.identityVerificationStatus),
+  // Composite index for admin filtering by status and date
+  statusCreatedAtIdx: index("status_created_at_idx").on(table.status, table.createdAt),
+}));
 
 export type LoanApplication = typeof loanApplications.$inferSelect;
 export type InsertLoanApplication = typeof loanApplications.$inferInsert;
@@ -236,13 +280,36 @@ export const payments = mysqlTable("payments", {
     "cancelled"     // Payment cancelled
   ]).default("pending").notNull(),
   
+  // Test mode flag
+  isTestMode: tinyint("isTestMode").default(0).notNull(), // 1 = test/sandbox payment, 0 = real payment
+  
   failureReason: text("failureReason"),
+  
+  // Retry logic
+  retryCount: int("retryCount").default(0).notNull(), // Number of retry attempts
+  lastRetryAt: timestamp("lastRetryAt"), // When the last retry was attempted
+  nextRetryAt: timestamp("nextRetryAt"), // When the next retry should be attempted
+  maxRetries: int("maxRetries").default(5).notNull(), // Maximum number of retries
+  isRetryEligible: tinyint("isRetryEligible").default(1).notNull(), // Whether payment can be retried
+  retryStrategy: varchar("retryStrategy", { length: 20 }).default("exponential"), // "exponential", "linear", "fibonacci"
+  
+  // Encryption metadata
+  encryptedFields: json("encryptedFields").$type<string[]>(), // Track which fields are encrypted
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   completedAt: timestamp("completedAt"),
-});
+}, (table) => ({
+  // Performance indexes
+  loanApplicationIdIdx: index("loan_application_id_idx").on(table.loanApplicationId),
+  userIdIdx: index("user_id_idx").on(table.userId),
+  statusIdx: index("status_idx").on(table.status),
+  paymentProviderIdx: index("payment_provider_idx").on(table.paymentProvider),
+  createdAtIdx: index("created_at_idx").on(table.createdAt),
+  // Composite index for admin filtering
+  statusCreatedAtIdx: index("status_created_at_idx").on(table.status, table.createdAt),
+}));
 
 export type Payment = typeof payments.$inferSelect;
 export type InsertPayment = typeof payments.$inferInsert;
@@ -298,6 +365,9 @@ export const disbursements = mysqlTable("disbursements", {
   transactionId: varchar("transactionId", { length: 255 }), // External transaction reference
   failureReason: text("failureReason"),
   adminNotes: text("adminNotes"),
+  
+  // Encryption metadata
+  encryptedFields: json("encryptedFields").$type<string[]>(), // Track which fields are encrypted
   
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -451,3 +521,89 @@ export const referrals = mysqlTable("referrals", {
 
 export type Referral = typeof referrals.$inferSelect;
 export type InsertReferral = typeof referrals.$inferInsert;
+
+/**
+ * User preferences for notifications and settings
+ */
+export const userPreferences = mysqlTable("userPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  
+  // Notification preferences
+  emailNotifications: int("emailNotifications").default(1).notNull(), // 0 = off, 1 = on
+  smsNotifications: int("smsNotifications").default(1).notNull(),
+  marketingEmails: int("marketingEmails").default(0).notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type InsertUserPreference = typeof userPreferences.$inferInsert;
+
+/**
+ * Admin bank accounts for holding funds to disburse to users
+ */
+export const adminBankAccounts = mysqlTable("adminBankAccounts", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Account identification
+  accountName: varchar("accountName", { length: 255 }).notNull(), // e.g., "Main Disbursement Account"
+  accountType: mysqlEnum("accountType", ["checking", "savings", "money_market"]).default("checking").notNull(),
+  bankName: varchar("bankName", { length: 255 }).notNull(),
+  accountNumber: varchar("accountNumber", { length: 50 }).notNull(), // Last 4 digits only for security
+  routingNumber: varchar("routingNumber", { length: 9 }),
+  
+  // Balance tracking (in cents)
+  currentBalance: int("currentBalance").default(0).notNull(),
+  availableBalance: int("availableBalance").default(0).notNull(), // Balance minus pending disbursements
+  reservedAmount: int("reservedAmount").default(0).notNull(), // Amount reserved for pending disbursements
+  
+  // Account status
+  status: mysqlEnum("status", ["active", "inactive", "closed"]).default("active").notNull(),
+  isDefault: int("isDefault").default(0).notNull(), // 0 = no, 1 = yes (only one can be default)
+  
+  // Metadata
+  notes: text("notes"),
+  createdBy: int("createdBy").notNull(), // Admin user ID
+  
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AdminBankAccount = typeof adminBankAccounts.$inferSelect;
+export type InsertAdminBankAccount = typeof adminBankAccounts.$inferInsert;
+
+/**
+ * Transaction history for admin bank accounts
+ */
+export const adminBankTransactions = mysqlTable("adminBankTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  accountId: int("accountId").notNull(), // Foreign key to adminBankAccounts
+  
+  // Transaction details
+  type: mysqlEnum("type", ["deposit", "withdrawal", "disbursement", "fee", "adjustment", "refund"]).notNull(),
+  amount: int("amount").notNull(), // in cents, positive for deposits, negative for withdrawals
+  balanceBefore: int("balanceBefore").notNull(), // Balance before transaction
+  balanceAfter: int("balanceAfter").notNull(), // Balance after transaction
+  
+  // Related records
+  loanApplicationId: int("loanApplicationId"), // If related to a loan disbursement
+  disbursementId: int("disbursementId"), // If related to a disbursement record
+  
+  // Transaction metadata
+  description: text("description").notNull(),
+  referenceNumber: varchar("referenceNumber", { length: 100 }), // Bank reference or check number
+  performedBy: int("performedBy").notNull(), // Admin user ID who performed the transaction
+  
+  // Timestamps
+  transactionDate: timestamp("transactionDate").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AdminBankTransaction = typeof adminBankTransactions.$inferSelect;
+export type InsertAdminBankTransaction = typeof adminBankTransactions.$inferInsert;
+

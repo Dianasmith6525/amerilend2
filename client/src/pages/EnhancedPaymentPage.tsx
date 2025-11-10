@@ -94,7 +94,7 @@ export default function EnhancedPaymentPage() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30">
-        <Card className="max-w-md">
+        <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Authentication Required</CardTitle>
             <CardDescription>Please sign in to make a payment</CardDescription>
@@ -112,7 +112,7 @@ export default function EnhancedPaymentPage() {
   if (!application || application.status !== "approved") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30">
-        <Card className="max-w-md">
+        <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Payment Not Available</CardTitle>
             <CardDescription>
@@ -147,8 +147,7 @@ export default function EnhancedPaymentPage() {
               </Button>
             </Link>
             <Link href="/">
-              <div className="flex items-center gap-3 cursor-pointer">
-                {APP_LOGO && <img src={APP_LOGO} alt={APP_TITLE} className="h-8 w-8" />}
+              <div className="flex items-center gap-1 cursor-pointer">
                 <h1 className="text-2xl font-bold"><span className="text-blue-600">Ameri</span><span className="text-yellow-600">Lend</span></h1>
               </div>
             </Link>

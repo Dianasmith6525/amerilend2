@@ -54,7 +54,7 @@ SG.YOUR_API_KEY_HERE
 ### 5. SENDGRID_FROM_EMAIL (REQUIRED)
 **Value:**
 ```
-noreply@amerilend.net
+noreply@amerilendloan.com
 ```
 **Environment:** Production ✅
 
@@ -154,7 +154,7 @@ Once environment variables are working:
 
 1. Go to: https://vercel.com/dianas-projects-32e424a3/amerilend/settings/domains
 2. Click "Add Domain"
-3. Enter: `www.amerilend.net`
+3. Enter: `www.amerilendloan.com`
 4. Follow Vercel's DNS instructions
 5. Add DNS records in Squarespace
 
@@ -171,7 +171,7 @@ Once environment variables are working:
 4. **Verify Sender:**
    - Settings → Sender Authentication
    - Verify Single Sender
-   - Use your email or noreply@amerilend.net
+   - Use your email or noreply@amerilendloan.com
 5. **Add to Vercel:**
    - SENDGRID_API_KEY: (paste the SG. key)
    - SENDGRID_FROM_EMAIL: (the verified email)
@@ -191,7 +191,7 @@ Once environment variables are working:
 - [ ] Add SENDGRID variables to Vercel
 - [ ] Redeploy with: `npx vercel --prod`
 - [ ] Test site login
-- [ ] Configure custom domain (www.amerilend.net)
+- [ ] Configure custom domain (www.amerilendloan.com)
 
 ---
 

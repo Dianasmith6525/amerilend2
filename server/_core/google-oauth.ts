@@ -49,31 +49,61 @@ export function getGoogleAuthUrl(): string {
 export async function getGoogleUserInfo(code: string): Promise<GoogleUserInfo> {
   const client = getGoogleClient();
   try {
+    console.log('[Google OAuth] Exchanging code for tokens...');
+    
     // Exchange code for tokens
     const { tokens } = await client.getToken(code);
+    
+    if (!tokens.id_token) {
+      console.error('[Google OAuth] No id_token in response');
+      throw new Error('No id_token received from Google');
+    }
+    
+    console.log('[Google OAuth] Tokens received, verifying...');
     client.setCredentials(tokens);
 
     // Get user info
     const ticket = await client.verifyIdToken({
-      idToken: tokens.id_token!,
+      idToken: tokens.id_token,
       audience: ENV.GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
     if (!payload) {
+      console.error('[Google OAuth] No payload in ticket');
       throw new Error('Failed to get user payload from Google');
     }
 
+    if (!payload.email || !payload.sub) {
+      console.error('[Google OAuth] Missing required fields in payload');
+      throw new Error('Invalid user data from Google');
+    }
+
+    console.log('[Google OAuth] User verified:', payload.email);
+
     return {
-      email: payload.email!,
-      name: payload.name!,
+      email: payload.email,
+      name: payload.name || payload.email,
       picture: payload.picture,
       email_verified: payload.email_verified || false,
       sub: payload.sub,
     };
-  } catch (error) {
-    console.error('Google OAuth error:', error);
-    throw new Error('Failed to authenticate with Google');
+  } catch (error: any) {
+    console.error('[Google OAuth] Full error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    
+    // More specific error messages
+    if (error.message?.includes('invalid_grant')) {
+      throw new Error('Authorization code expired or invalid. Please try logging in again.');
+    }
+    if (error.message?.includes('redirect_uri_mismatch')) {
+      throw new Error('OAuth redirect URI mismatch. Please contact support.');
+    }
+    
+    throw new Error(`Google authentication failed: ${error.message}`);
   }
 }
 

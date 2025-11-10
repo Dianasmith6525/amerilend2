@@ -7,7 +7,7 @@ export default function TermsOfUse() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 max-w-7xl">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="text-2xl font-bold">
               <span className="text-[#0033A0]">Ameri</span>
@@ -20,7 +20,7 @@ export default function TermsOfUse() {
 
       {/* Content */}
       <main className="flex-1 py-12">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="container mx-auto px-4 sm:px-6 md:px-8 max-w-5xl">
           <Link href="/apply">
             <Button variant="ghost" className="mb-6 text-[#0033A0]">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -96,7 +96,7 @@ export default function TermsOfUse() {
 
             <section className="mt-8 p-4 bg-blue-50 rounded-lg border-l-4 border-[#0033A0]">
               <p className="text-sm text-gray-600">
-                Last Updated: November 2025. If you have any questions about these Terms of Use, please contact us at info@amerilend.com or (800) 990-9130.
+                Last Updated: November 2025. If you have any questions about these Terms of Use, please contact us at info@amerilendloan.com or (800) 990-9130.
               </p>
             </section>
           </div>
