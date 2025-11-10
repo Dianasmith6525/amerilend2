@@ -26,13 +26,15 @@ import LoanGuideDetail from "./pages/LoanGuideDetail";
 import UserProfile from "./pages/UserProfile";
 import PreQualification from "./pages/PreQualification";
 import GoogleCallback from "./pages/GoogleCallback";
+import ApplicationTracker from "./pages/ApplicationTracker";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/apply"} component={Dashboard} />
-      <Route path={"/check-status"} component={Dashboard} />
+      <Route path={"/check-status"} component={ApplicationTracker} />
+      <Route path={"/track"} component={ApplicationTracker} />
       <Route path={"/pre-qualify"} component={PreQualification} />
       <Route path={"/admin"} component={Dashboard} />
       <Route path={"/admin/*"} component={Dashboard} />
