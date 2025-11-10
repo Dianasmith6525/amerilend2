@@ -1,0 +1,129 @@
+name: TestSprite E2E Tests
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+
+jobs:
+  test:
+    name: Run TestSprite Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run tests against different environments
+        environment:
+          - name: 'Production'
+            url: 'https://amerilendloan.com'
+          - name: 'Staging'
+            url: 'https://staging.amerilendloan.com'
+            skip: true  # Skip staging if not available
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run TestSprite tests
+        if: ${{ !matrix.environment.skip }}
+        run: npx playwright test
+        env:
+          APP_URL: ${{ matrix.environment.url }}
+          API_URL: ${{ matrix.environment.url }}/api
+          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          TESTSPRITE_PROJECT_ID: ${{ secrets.TESTSPRITE_PROJECT_ID }}
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+          NODE_ENV: 'ci'
+          HEADLESS: 'true'
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report-${{ matrix.environment.name }}
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload test videos
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-videos-${{ matrix.environment.name }}
+          path: test-results/
+          retention-days: 7
+
+      - name: Publish test results
+        if: always()
+        uses: actions/publish-unit-test-result-action@v2
+        with:
+          files: test-results/**/*.xml
+          check_name: TestSprite Results - ${{ matrix.environment.name }}
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const testResults = fs.existsSync('test-results/summary.json') 
+              ? JSON.parse(fs.readFileSync('test-results/summary.json', 'utf8'))
+              : { passed: 0, failed: 0, skipped: 0 };
+            
+            const summary = `## TestSprite Test Results - ${{ matrix.environment.name }}
+            
+            ✅ Passed: ${testResults.passed}
+            ❌ Failed: ${testResults.failed}
+            ⊘ Skipped: ${testResults.skipped}
+            
+            [View Full Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });
+
+  notify:
+    name: Notify on Failure
+    needs: test
+    runs-on: ubuntu-latest
+    if: failure() && github.event_name == 'push'
+
+    steps:
+      - name: Send Slack notification
+        if: ${{ secrets.SLACK_WEBHOOK }}
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "TestSprite tests failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ TestSprite tests failed on *${{ github.ref }}*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Details>"
+                  }
+                }
+              ]
+            }

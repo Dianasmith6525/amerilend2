@@ -2,52 +2,124 @@
 
 ## What is TestSprite?
 
-TestSprite is an AI-powered automated testing tool that integrates with your IDE to automatically generate, execute, and debug integration tests for your web application.
+TestSprite is an AI-powered automated testing platform that provides:
+1. **IDE Integration** - Direct AI assistant support for test generation
+2. **E2E Testing Framework** - Playwright-based automated tests
+3. **CI/CD Integration** - GitHub Actions workflow for continuous testing
 
 ## Configuration
 
-TestSprite has been configured for your AmeriLend project with the following settings:
+TestSprite has been configured for your AmeriLend project with multiple components:
 
-### Configuration File
-- **Location**: `testsprite.config.ts`
-- **API Key**: Stored in `.env` as `TESTSPRITE_API_KEY`
-- **Base URL**: `http://localhost:5000` (your dev server)
+### Configuration Files
+- **`testsprite.config.js`** - Main configuration with environment settings
+- **`playwright.config.ts`** - Playwright E2E test runner
+- **`.env.test`** - Test environment variables (create locally)
+- **`.github/workflows/testsprite.yml`** - CI/CD workflow
+
+### Pre-configured Test Suites
+
+We've created 4 comprehensive test suites with 38+ automated tests:
+
+#### 1. **Authentication Tests** (`tests/e2e/auth.spec.ts` - 8 tests)
+- Login page rendering
+- Invalid credentials handling  
+- Successful login flow
+- Logout functionality
+- OAuth integrations (Google, Microsoft, Apple)
+- Password reset flow
+
+#### 2. **Loan Application Tests** (`tests/e2e/applications.spec.ts` - 8 tests)
+- Application form rendering
+- Required field validation
+- Loan amount validation range
+- Successful application submission
+- Reference number generation
+- Application status display
+- Draft saving capability
+
+#### 3. **Payment Processing Tests** (`tests/e2e/payments.spec.ts` - 10 tests)
+- Payment page rendering
+- Payment method selection (Authorize.net, Stripe, Crypto)
+- Authorize.net payment processing
+- Stripe payment processing
+- Crypto payment processing
+- Payment failure handling
+- Receipt display and download
+
+#### 4. **API Tests** (`tests/e2e/api.spec.ts` - 12 tests)
+- Health check endpoints
+- User authentication via API
+- User profile retrieval
+- Application CRUD operations
+- Payment processing API
+- Rate limiting validation
+- Error message formatting
+- CORS configuration
 
 ### Pre-configured Test Scenarios
 
-1. **Homepage Navigation**
-   - Tests all navigation links
-   - Verifies "Apply Now" button functionality
-   - Checks page redirects
-
-2. **State Pagination**
-   - Tests the new state navigation buttons (Previous/Next)
-   - Verifies state list changes correctly
-   - Ensures pagination works on all devices
-
-3. **Trust Seals Display**
-   - Verifies Authorize.Net seal loads correctly
-   - Checks DigiCert seal visibility
-   - Confirms Entrust seal displays
-
 ## How to Use TestSprite
 
-### Option 1: Run via npm script
-\`\`\`bash
-npm run test:testsprite
-\`\`\`
+### Running Tests Locally
 
-### Option 2: Run via npx directly
-\`\`\`bash
-npx @testsprite/testsprite-mcp
-\`\`\`
+#### Option 1: Run all E2E tests
+```bash
+npm run test:e2e
+```
 
-### Option 3: Use with your IDE's AI assistant
+#### Option 2: Run specific test suite
+```bash
+npm run test:e2e:auth          # Authentication tests
+npm run test:e2e:applications  # Loan application tests
+npm run test:e2e:payments      # Payment tests
+npm run test:e2e:api           # API tests
+```
 
-Since TestSprite is an MCP (Model Context Protocol) plugin, it can be used directly within your IDE through AI assistants like:
-- GitHub Copilot
-- Cursor
-- Other MCP-compatible tools
+#### Option 3: Run with interactive UI
+```bash
+npm run test:e2e:ui
+```
+
+#### Option 4: Debug mode
+```bash
+npm run test:e2e:debug
+```
+
+#### Option 5: View test report
+```bash
+npm run test:e2e:report
+```
+
+### Running via Direct Commands
+
+```bash
+# Run all tests
+npx playwright test
+
+# Run specific file
+npx playwright test auth.spec.ts
+
+# Run in headed mode (see browser)
+npx playwright test --headed
+
+# Run with debug inspector
+npx playwright test --debug
+
+# Run specific project/browser
+npx playwright test --project=chromium
+npx playwright test --project=firefox
+npx playwright test --project=webkit
+```
+
+### Using with IDE AI Assistants
+
+TestSprite is available as an MCP plugin for:
+- **GitHub Copilot** in VS Code
+- **Cursor IDE**
+- **Other MCP-compatible IDEs**
+
+Option 1: Run via npm script
 
 ## Test Configuration
 
