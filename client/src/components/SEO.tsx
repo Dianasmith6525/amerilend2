@@ -8,6 +8,11 @@ interface SEOProps {
   url?: string;
 }
 
+interface StructuredDataProps {
+  type: string;
+  data: Record<string, unknown>;
+}
+
 const SEO: React.FC<SEOProps> = ({ 
   title = 'AmeriLend', 
   description = 'Get fast, reliable personal loans from AmeriLend',
@@ -37,6 +42,25 @@ const SEO: React.FC<SEOProps> = ({
       document.head.appendChild(meta);
     }
   }, [title, description, keywords]);
+
+  return null;
+};
+
+export const StructuredData: React.FC<StructuredDataProps> = ({ type, data }) => {
+  React.useEffect(() => {
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': type,
+      ...data,
+    });
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, [type, data]);
 
   return null;
 };
