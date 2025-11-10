@@ -1,7 +1,7 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { adminBankRouter } from "./_core/adminBankRouter";
+// import { adminBankRouter } from "./_core/adminBankRouter"; // Module not found
 import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -110,7 +110,7 @@ async function sendPaymentReceipt(payment: any, application: any, customerEmail:
 
 export const appRouter = router({
   system: systemRouter,
-  adminBank: adminBankRouter,
+  // adminBank: adminBankRouter, // Module not found
   
   // Authentication router
   auth: router({

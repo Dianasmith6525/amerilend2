@@ -1,29 +1,52 @@
-import React from 'react';
+import * as React from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children: React.ReactNode;
+interface EnhancedButtonProps extends React.ComponentProps<typeof Button> {
+  icon?: React.ReactNode;
 }
 
-export const PrimaryButton: React.FC<ButtonProps> = ({ children, className = '', ...props }) => {
-  return (
-    <button
-      className={`px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-};
+/**
+ * PrimaryButton - Main action button with brand color (blue)
+ * Used for primary calls-to-action like "Apply Now"
+ */
+export const PrimaryButton = React.forwardRef<
+  HTMLButtonElement,
+  EnhancedButtonProps
+>(({ className, icon, children, ...props }, ref) => (
+  <Button
+    ref={ref}
+    className={cn(
+      "bg-[#0033A0] text-white hover:bg-[#0033A0]/90 font-semibold",
+      className
+    )}
+    {...props}
+  >
+    {children}
+    {icon && <span className="ml-1">{icon}</span>}
+  </Button>
+));
+PrimaryButton.displayName = "PrimaryButton";
 
-export const SecondaryButton: React.FC<ButtonProps> = ({ children, className = '', ...props }) => {
-  return (
-    <button
-      className={`px-6 py-3 bg-gray-200 text-gray-900 rounded-lg font-semibold hover:bg-gray-300 transition-colors ${className}`}
-      {...props}
-    >
-      {children}
-    </button>
-  );
-};
-
-export default { PrimaryButton, SecondaryButton };
+/**
+ * SecondaryButton - Secondary action button with outline style
+ * Used for secondary calls-to-action like "Log In", "Dashboard"
+ */
+export const SecondaryButton = React.forwardRef<
+  HTMLButtonElement,
+  EnhancedButtonProps
+>(({ className, icon, children, ...props }, ref) => (
+  <Button
+    ref={ref}
+    variant="outline"
+    className={cn(
+      "border-2 border-[#0033A0] text-[#0033A0] hover:bg-[#0033A0] hover:text-white font-semibold transition-all",
+      className
+    )}
+    {...props}
+  >
+    {children}
+    {icon && <span className="ml-1">{icon}</span>}
+  </Button>
+));
+SecondaryButton.displayName = "SecondaryButton";
