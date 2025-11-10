@@ -1,12 +1,9 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { AlertCircle, Loader2, CheckCircle2, Clock, XCircle, ArrowLeft, Home } from "lucide-react";
+import { AlertCircle, Loader2, CheckCircle2, Clock, XCircle, Home } from "lucide-react";
 import SEO from "@/components/SEO";
-import { APP_LOGO, APP_TITLE } from "@/const";
+import { APP_TITLE } from "@/const";
 
 export default function ApplicationTracker() {
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -80,172 +77,168 @@ export default function ApplicationTracker() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
+    <div className="w-screen min-h-screen bg-gradient-to-b from-blue-50 to-white">
       <SEO
         title={`Track Your Application - ${APP_TITLE}`}
-        description="Track your loan application status using your reference number"
+        description="Track your loan application status"
       />
 
-      {/* Header */}
-      <div className="border-b border-slate-200 bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto w-full px-4 py-4 flex items-center justify-between gap-6">
+      {/* Simple Header */}
+      <header className="w-full bg-white border-b border-gray-200">
+        <div className="h-16 flex items-center justify-between px-8 max-w-7xl mx-auto w-full">
+          <h1 className="text-2xl font-bold text-blue-900">{APP_TITLE}</h1>
           <Link href="/">
-            <div className="text-xl font-bold flex items-center gap-2 cursor-pointer">
-              {APP_TITLE}
-            </div>
-          </Link>
-          <Link href="/">
-            <Button variant="outline" size="sm">
+            <Button size="sm" variant="outline">
               <Home className="w-4 h-4 mr-2" />
               Home
             </Button>
           </Link>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="flex-1 max-w-3xl w-full mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-slate-900 mb-3">
-            Track Your Application
-          </h1>
-          <p className="text-lg text-slate-600">
-            Enter your reference number to check your status
-          </p>
-        </div>
+      <main className="w-full px-6 py-12">
+        <div className="max-w-2xl mx-auto">
+          {/* Title Section */}
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">Track Your Application</h2>
+            <p className="text-lg text-gray-600">Enter your reference number to check status</p>
+          </div>
 
-        {/* Search Card */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-2xl">Search Application</CardTitle>
-            <CardDescription className="text-base">
-              Find it in your confirmation email
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSearch} className="space-y-4">
+          {/* Search Form */}
+          <div className="bg-white rounded-lg shadow-md p-8 mb-8 border border-gray-200">
+            <form onSubmit={handleSearch} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="reference" className="text-base">Reference Number</Label>
-                <Input
-                  id="reference"
+                <label className="block text-sm font-medium text-gray-700">Reference Number</label>
+                <input
+                  type="text"
                   placeholder="e.g., REF-2024-001234"
                   value={referenceNumber}
                   onChange={(e) => setReferenceNumber(e.target.value)}
                   disabled={isLoading}
-                  className="text-lg py-2 px-3 h-auto"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                 />
               </div>
-              <Button type="submit" disabled={isLoading} className="w-full text-base py-2 h-auto">
+              <Button 
+                type="submit" 
+                disabled={isLoading} 
+                className="w-full py-3 text-base"
+              >
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Search
+                {isLoading ? "Searching..." : "Search Application"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Error Message */}
-        {error && (
-          <Card className="border-red-200 bg-red-50 mb-8">
-            <CardContent className="pt-6 flex gap-4">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          {/* Error Message */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8 flex gap-4">
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
               <div className="flex-1">
-                <p className="font-semibold text-red-900 mb-1">Search Error</p>
+                <h3 className="font-semibold text-red-900 mb-1">Search Error</h3>
                 <p className="text-red-700 text-sm">{error}</p>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          )}
 
-        {/* Application Status */}
-        {applicationData && (
-          <Card className={`border-2 mb-8 ${getStatusColor(applicationData.status)}`}>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex-1">
-                  <CardTitle className="text-2xl mb-1">Application Status</CardTitle>
-                  <CardDescription>Reference: {referenceNumber}</CardDescription>
+          {/* Application Status */}
+          {applicationData && (
+            <div className="bg-white rounded-lg shadow-md p-8 border border-gray-200 mb-8">
+              <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-200">
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-1">Application Status</h3>
+                  <p className="text-gray-600">Reference: {referenceNumber}</p>
                 </div>
                 {getStatusIcon(applicationData.status)}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-white rounded-lg p-5 border border-slate-200">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-600 font-medium">Status</span>
-                    <span className="text-lg font-bold text-slate-900 capitalize">
-                      {applicationData.status}
+
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 font-medium">Status</span>
+                  <span className={`text-lg font-bold capitalize px-4 py-2 rounded ${
+                    applicationData.status === "approved" ? "bg-green-100 text-green-800" :
+                    applicationData.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                    applicationData.status === "rejected" ? "bg-red-100 text-red-800" :
+                    "bg-blue-100 text-blue-800"
+                  }`}>
+                    {applicationData.status}
+                  </span>
+                </div>
+
+                {applicationData.applicantName && (
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <span className="text-gray-600 font-medium">Applicant</span>
+                    <span className="text-gray-900">{applicationData.applicantName}</span>
+                  </div>
+                )}
+
+                {applicationData.loanAmount && (
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <span className="text-gray-600 font-medium">Loan Amount</span>
+                    <span className="text-gray-900 font-semibold">
+                      ${applicationData.loanAmount.toLocaleString()}
                     </span>
                   </div>
+                )}
 
-                  {applicationData.applicantName && (
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                      <span className="text-slate-600 font-medium">Applicant</span>
-                      <span className="text-slate-900">{applicationData.applicantName}</span>
-                    </div>
-                  )}
+                {applicationData.appliedAt && (
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <span className="text-gray-600 font-medium">Applied Date</span>
+                    <span className="text-gray-900">
+                      {new Date(applicationData.appliedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
 
-                  {applicationData.loanAmount && (
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                      <span className="text-slate-600 font-medium">Loan Amount</span>
-                      <span className="text-slate-900">
-                        ${applicationData.loanAmount.toLocaleString()}
-                      </span>
-                    </div>
-                  )}
-
-                  {applicationData.appliedAt && (
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                      <span className="text-slate-600 font-medium">Applied Date</span>
-                      <span className="text-slate-900">
-                        {new Date(applicationData.appliedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-
-                  {applicationData.updatedAt && (
-                    <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                      <span className="text-slate-600 font-medium">Last Updated</span>
-                      <span className="text-slate-900">
-                        {new Date(applicationData.updatedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                {applicationData.updatedAt && (
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <span className="text-gray-600 font-medium">Last Updated</span>
+                    <span className="text-gray-900">
+                      {new Date(applicationData.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {applicationData.notes && (
-                <div className="bg-white rounded-lg p-5 border border-slate-200">
-                  <p className="text-slate-600 font-medium mb-2">Notes</p>
-                  <p className="text-slate-700">{applicationData.notes}</p>
+                <div className="mt-8 p-5 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-gray-600 font-medium mb-2">Notes</p>
+                  <p className="text-gray-700">{applicationData.notes}</p>
                 </div>
               )}
 
-              <div className="pt-4">
+              <div className="mt-8 pt-6 border-t border-gray-200">
                 <Link href="/login">
                   <Button variant="outline" className="w-full">
                     Sign In for More Details
                   </Button>
                 </Link>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          )}
 
-        {/* Help Section */}
-        {!searched && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Need Help?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-slate-600">
-              <p>• Check your confirmation email for your reference number</p>
-              <p>• Reference numbers start with REF- followed by numbers</p>
-              <p>• Can't find it? Contact our support team</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          {/* Help Section */}
+          {!searched && (
+            <div className="bg-white rounded-lg shadow-md p-8 border border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Need Help?</h3>
+              <ul className="space-y-3 text-gray-600">
+                <li className="flex items-start gap-3">
+                  <span className="text-blue-600 font-bold mt-0.5">•</span>
+                  <span>Check your confirmation email for your reference number</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-blue-600 font-bold mt-0.5">•</span>
+                  <span>Reference numbers start with REF- followed by numbers</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-blue-600 font-bold mt-0.5">•</span>
+                  <span>Can't find it? Contact our support team</span>
+                </li>
+              </ul>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
