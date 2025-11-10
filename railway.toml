@@ -1,0 +1,48 @@
+# Railway Configuration for AmeriLend Backend
+# This file configures how Railway deploys the Express + tRPC backend
+
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "node dist/index.js"
+healthcheckPath = "/api/trpc/health.query"
+healthcheckInterval = 10
+restartPolicyMaxRetries = 3
+
+[env]
+# Node environment
+NODE_ENV = "production"
+
+# Database
+DATABASE_URL = "${{ RAILWAY_DATABASE_URL }}"
+
+# Authentication
+JWT_SECRET = "${{ secrets.JWT_SECRET }}"
+
+# OAuth Configuration
+OAUTH_SERVER_URL = "${{ secrets.OAUTH_SERVER_URL }}"
+VITE_APP_ID = "${{ secrets.VITE_APP_ID }}"
+
+# SendGrid Email
+SENDGRID_API_KEY = "${{ secrets.SENDGRID_API_KEY }}"
+SENDGRID_FROM_EMAIL = "noreply@amerilendloan.com"
+
+# Application URLs
+VITE_CLIENT_URL = "https://amerilendloan.com"
+VITE_API_URL = "https://api.amerilendloan.com"
+
+# Payment Gateway Keys (if using)
+AUTHORIZE_NET_API_KEY = "${{ secrets.AUTHORIZE_NET_API_KEY }}"
+AUTHORIZE_NET_TRANSACTION_KEY = "${{ secrets.AUTHORIZE_NET_TRANSACTION_KEY }}"
+
+# Stripe Keys (if using)
+STRIPE_SECRET_KEY = "${{ secrets.STRIPE_SECRET_KEY }}"
+STRIPE_PUBLISHABLE_KEY = "${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
+
+# Logging
+LOG_LEVEL = "info"
+
+[volumes]
+# Persist logs if needed
+# /app/logs = "/logs"
